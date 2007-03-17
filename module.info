@@ -3,4 +3,4 @@ category=system
 depends=software cron mailboxes 1.221
 #os_support=redhat-linux debian-linux mandrake-linux open-linux freebsd
 os_support=redhat-linux debian-linux
-version=1.2
+version=1.3

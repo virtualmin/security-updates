@@ -1,6 +1,5 @@
 # Functions for checking for security updates of core Virtualmin packages
 # XXX need to setup software.virtualmin.com with packages?
-# XXX authentication?
 # XXX other packages?
 
 do '../web-lib.pl';
@@ -14,10 +13,12 @@ do '../ui-lib.pl';
 		     "postgresql", "proftpd", "clamav", "php4", "mailman",
 		     "subversion", "python", "ruby", "irb", "rdoc",
 		     "openssl", "perl", "php5", "webmin", "usermin",
+		     "virtualmin-modules",
 		   ); 
 
 $updates_cache_file = "$module_config_directory/updates.cache";
 $available_cache_file = "$module_config_directory/available.cache";
+$current_cache_file = "$module_config_directory/current.cache";
 $cron_cmd = "$module_config_directory/update.pl";
 
 $virtualmin_host = $config{'host'} || "software.virtualmin.com";
@@ -60,13 +61,14 @@ local ($user, $pass) = &get_user_pass();
 return ( ) if ($error);		# None for this OS
 foreach my $l (split(/\r?\n/, $list)) {
 	next if ($l =~ /^#/);
-	local ($name, $version, $os, $desc) = split(/\s+/, $l, 4);
+	local ($name, $version, $severity, $os, $desc) = split(/\s+/, $l, 5);
 	if ($name && $version) {
 		$os =~ s/;/ /g;
 		local %info = ( 'os_support' => $os );
 		if (&check_os_support(\%info)) {
 			push(@rv, { 'name' => $name,
 				    'version' => $version,
+				    'severity' => $severity,
 				    'desc' => $desc });
 			}
 		}
@@ -80,27 +82,35 @@ return @rv;
 sub list_current
 {
 local ($nocache) = @_;
-local $n = &software::list_packages();
-local @rv;
-foreach my $p (@update_packages) {
-	local @pkgs = split(/\s+/, &package_resolve($p));
-	foreach my $pn (@pkgs) {
-		for(my $i=0; $i<$n; $i++) {
-			if ($software::packages{$i,'name'} eq $pn) {
-				# Found it!
-				push(@rv, { 'name' => $pn,
-					    'version' =>
-					     $software::packages{$i,'version'},
-					    'desc' =>
-					     $software::packages{$i,'desc'},
-					    'package' => $p,
-					});
-				last;
+if ($nocache || &cache_expired($current_cache_file)) {
+	local $n = &software::list_packages();
+	local @rv;
+	foreach my $p (@update_packages) {
+		local @pkgs = split(/\s+/, &package_resolve($p));
+		foreach my $pn (@pkgs) {
+			for(my $i=0; $i<$n; $i++) {
+				if ($software::packages{$i,'name'} =~ /^$pn$/) {
+					# Found it!
+					push(@rv, {
+					  'name' =>
+					    $software::packages{$i,'name'},
+					  'version' =>
+					    $software::packages{$i,'version'},
+					  'desc' =>
+					    $software::packages{$i,'desc'},
+					  'package' => $p,
+					  });
+					last;
+					}
 				}
 			}
 		}
+	&write_cache_file($current_cache_file, \@rv);
+	return @rv;
 	}
-return @rv;
+else {
+	return &read_cache_file($current_cache_file);
+	}
 }
 
 # list_all_current(nocache)
@@ -141,8 +151,8 @@ if ($nocache || &cache_expired($available_cache_file)) {
 	foreach my $p (@update_packages) {
 		local @pkgs = split(/\s+/, &package_resolve($p));
 		foreach my $pn (@pkgs) {
-			local ($avail) = grep { $_->{'name'} eq $pn } @avail;
-			if ($avail) {
+			local @avail = grep { $_->{'name'} =~ /^$pn$/ } @avail;
+			foreach my $avail (@avail) {
 				$avail->{'package'} = $p;
 				push(@rv, $avail);
 				}
@@ -221,7 +231,14 @@ return $job;
 sub package_resolve
 {
 local ($name) = @_;
-if (open(RESOLV, "$module_root_directory/resolve.$gconfig{'os_type'}")) {
+local $realos = $gconfig{'real_os_type'};
+$realos =~ s/ /-/g;
+local $realver = $gconfig{'real_os_version'};
+$realver =~ s/ /-/g;
+if (open(RESOLV, "$module_root_directory/resolve.$realos-$realver") ||
+    open(RESOLV, "$module_root_directory/resolve.$realos") ||
+    open(RESOLV, "$module_root_directory/resolve.$gconfig{'os_type'}-$gconfig{'os_version'}") ||
+    open(RESOLV, "$module_root_directory/resolve.$gconfig{'os_type'}")) {
 	local $rv;
 	while(<RESOLV>) {
 		if (/^(\S+)\s+(.*)/ && $1 eq $name) {
@@ -282,8 +299,9 @@ else {
 sub package_install
 {
 local ($name) = @_;
+local @rv;
 if (defined(&software::update_system_install)) {
-	return &software::update_system_install($name);
+	@rv = &software::update_system_install($name);
 	}
 else {
 	# Need to download and install manually, and print out result.
@@ -292,7 +310,6 @@ else {
 		print &text('update_efound', $name),"<br>\n";
 		return ( );
 		}
-	local @rv;
 
 	# Recursively resolve any dependencies
 	local @current = &list_all_current(1);
@@ -321,6 +338,7 @@ else {
 				push(@rv, @dgot);
 				}
 			else {
+				# Could not find!
 				return ( );
 				}
 			}
@@ -337,6 +355,7 @@ else {
 	&http_download($phost, $pport, $ppage, $temp, \$error,
 		       \&progress_callback, 0, $user, $pass);
 	if ($error) {
+		# Could not download
 		print &text('update_edownload', $pfile, $error),
 		      "<br>\n";
 		return ( );
@@ -346,6 +365,7 @@ else {
 	local %fakein = ( 'upgrade' => 1 );
 	local $err = &software::install_package($temp, $pkg->{'name'}, \%fakein);
 	if ($err) {
+		# Could not install
 		print &text('update_einstall', $err),"<br>\n";
 		return ( );
 		}
@@ -354,9 +374,11 @@ else {
 						      $pkg->{'version'});
 		print &text('update_done', $info[0], $info[4], $info[2]),
 		      "<br>\n";
-		return ( @rv, $info[0] );
+		push(@rv, $info[0]);
 		}
 	}
+# Flush installed cache
+unlink($current_cache_file);
 }
 
 # get_user_pass()
@@ -366,6 +388,40 @@ sub get_user_pass
 local %licence;
 &read_env_file($virtualmin_licence, \%licence);
 return ($licence{'SerialNumber'}, $licence{'LicenseKey'});
+}
+
+# list_possible_updates([nocache])
+# Returns a list of updates that are available. Each element in the array
+# is a hash ref containing a name, version, description and severity flag.
+# Intended for calling from themes.
+sub list_possible_updates
+{
+local ($nocache) = @_;
+local @rv;
+local @updates = &list_security_updates($nocache == 1);
+local @current = &list_current($nocache);
+local @avail = &list_available($nocache == 1);
+foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
+	# Work out the status
+	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
+	($u) = grep { $_->{'name'} eq $c->{'name'} } @updates;
+	if ($u && &compare_versions($u->{'version'}, $c->{'version'}) > 0 &&
+	    $a && &compare_versions($a->{'version'}, $u->{'version'}) >= 0) {
+		# Security update is available
+		push(@rv, { 'name' => $a->{'name'},
+			    'version' => $a->{'version'},
+			    'desc' => $u->{'desc'},
+			    'severity' => $u->{'severity'} });
+		}
+	elsif (&compare_versions($a->{'version'}, $c->{'version'}) > 0) {
+		# A regular update is available
+		push(@rv, { 'name' => $a->{'name'},
+			    'version' => $a->{'version'},
+			    'desc' => $c->{'desc'} || $a->{'desc'},
+			    'severity' => 0 });
+		}
+	}
+return @rv;
 }
 
 1;

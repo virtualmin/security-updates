@@ -13,14 +13,17 @@ if ($err) {
 	exit;
 	}
 
-#@updates = &list_security_updates();
-@current = &list_current();
+@updates = &list_security_updates();
+@current = &list_current(1);
 @avail = &list_available();
 print &ui_form_start("update.cgi");
 @tds = ( "width=5" );
+@links = ( &select_all_link("u"), &select_invert_link("u") );
+print &ui_links_row(\@links);
 print &ui_columns_start([ "", $text{'index_name'},
 			  $text{'index_desc'},
 			  $text{'index_status'} ], \@tds);
+$sft = &foreign_available("software");
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
 	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
@@ -48,19 +51,29 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		       &text('index_new', $a->{'version'})."</font></b>";
 		$need = 1;
 		}
+	elsif (!$a->{'version'}) {
+		# No update exists
+		$msg = "<font color=#ffaa00><b>".
+			&text('index_noupdate', $c->{'version'})."</b></font>";
+		$need = 0;
+		}
 	else {
 		# We have the latest
 		$msg = &text('index_ok', $c->{'version'});
 		$need = 0;
 		}
 	print &ui_checked_columns_row([
-		$c->{'name'},
+		$sft ? "<a href='../software/edit_pack.cgi?package=".
+		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $c->{'name'},
 		$c->{'desc'},
 		$msg ],
 		\@tds, "u", $c->{'name'}, $need);
 	}
 print &ui_columns_end();
-print &ui_form_end([ [ "ok", $text{'index_update'} ] ]);
+print &ui_links_row(\@links);
+print &ui_form_end([ [ "ok", $text{'index_update'} ],
+		     undef,
+		     [ "refresh", $text{'index_refresh'} ] ]);
 
 # Show scheduled report form
 print "<hr>\n";
