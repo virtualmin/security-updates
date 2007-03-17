@@ -16,7 +16,7 @@ do '../ui-lib.pl';
 		     "virtualmin-modules",
 		   ); 
 
-$updates_cache_file = "$module_config_directory/updates.cache";
+$security_cache_file = "$module_config_directory/security.cache";
 $available_cache_file = "$module_config_directory/available.cache";
 $current_cache_file = "$module_config_directory/current.cache";
 $cron_cmd = "$module_config_directory/update.pl";
@@ -54,26 +54,32 @@ else {
 sub list_security_updates
 {
 local ($nocache) = @_;
-local ($list, @rv, $error);
-local ($user, $pass) = &get_user_pass();
-&http_download($virtualmin_host, $virtualmin_port, $virtualmin_security,
-	       \$list, \$error, undef, 0, $user, $pass);
-return ( ) if ($error);		# None for this OS
-foreach my $l (split(/\r?\n/, $list)) {
-	next if ($l =~ /^#/);
-	local ($name, $version, $severity, $os, $desc) = split(/\s+/, $l, 5);
-	if ($name && $version) {
-		$os =~ s/;/ /g;
-		local %info = ( 'os_support' => $os );
-		if (&check_os_support(\%info)) {
-			push(@rv, { 'name' => $name,
-				    'version' => $version,
-				    'severity' => $severity,
-				    'desc' => $desc });
+if ($nocache || &cache_expired($security_cache_file)) {
+	local ($list, @rv, $error);
+	local ($user, $pass) = &get_user_pass();
+	&http_download($virtualmin_host, $virtualmin_port, $virtualmin_security,
+		       \$list, \$error, undef, 0, $user, $pass);
+	return ( ) if ($error);		# None for this OS
+	foreach my $l (split(/\r?\n/, $list)) {
+		next if ($l =~ /^#/);
+		local ($name, $version, $severity, $os, $desc) = split(/\s+/, $l, 5);
+		if ($name && $version) {
+			$os =~ s/;/ /g;
+			local %info = ( 'os_support' => $os );
+			if (&check_os_support(\%info)) {
+				push(@rv, { 'name' => $name,
+					    'version' => $version,
+					    'severity' => $severity,
+					    'desc' => $desc });
+				}
 			}
 		}
+	&write_cache_file($security_cache_file, \@rv);
+	return @rv;
 	}
-return @rv;
+else {
+	return &read_cache_file($security_cache_file);
+	}
 }
 
 # list_current(nocache)
