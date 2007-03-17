@@ -1,0 +1,3 @@
+postgresql	postgresql postgresql-server rh-postgresql rh-postgresql-server perl-DBD-Pg
+mysql		mysql mysql-server perl-DBD-MySQL
+perl		perl mod_perl
