@@ -11,9 +11,9 @@ require './security-updates-lib.pl';
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
 	($u) = grep { $_->{'name'} eq $c->{'name'} } @updates;
-	if ($u && &compare_versions($u->{'version'}, $c->{'version'}) > 0) {
+	if ($u && &compare_versions($u, $c) > 0) {
 		# A security problem was detected
-		if (&compare_versions($a->{'version'}, $u->{'version'}) >= 0) {
+		if (&compare_versions($a, $u) >= 0) {
 			# And an update is available
 			push(@todo, { 'name' => $c->{'name'},
 				      'version' => $a->{'version'},
@@ -28,7 +28,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 				      'level' => 0 });
 			}
 		}
-	elsif (&compare_versions($a->{'version'}, $c->{'version'}) > 0) {
+	elsif (&compare_versions($a, $c) > 0) {
 		# An update is available
 		push(@todo, { 'name' => $c->{'name'},
 				 'version' => $a->{'version'},

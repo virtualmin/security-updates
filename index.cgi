@@ -28,9 +28,9 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
 	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
 	($u) = grep { $_->{'name'} eq $c->{'name'} } @updates;
-	if ($u && &compare_versions($u->{'version'}, $c->{'version'}) > 0) {
+	if ($u && &compare_versions($u, $c) > 0) {
 		# A security problem was detected
-		if (&compare_versions($a->{'version'}, $u->{'version'}) >= 0) {
+		if (&compare_versions($a, $u) >= 0) {
 			# And an update is available
 			$msg = "<font color=#aa0000>".
 			       &text('index_bad', $u->{'version'},
@@ -45,7 +45,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 			$need = 0;
 			}
 		}
-	elsif (&compare_versions($a->{'version'}, $c->{'version'}) > 0) {
+	elsif (&compare_versions($a, $c) > 0) {
 		# An update is available
 		$msg = "<b><font color=#00aa00>".
 		       &text('index_new', $a->{'version'})."</font></b>";

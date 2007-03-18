@@ -67,8 +67,13 @@ if ($nocache || &cache_expired($security_cache_file)) {
 			$os =~ s/;/ /g;
 			local %info = ( 'os_support' => $os );
 			if (&check_os_support(\%info)) {
+				local $epoch;
+				if ($version =~ s/^(\S+)://) {
+					$epoch = $1;
+					}
 				push(@rv, { 'name' => $name,
 					    'version' => $version,
+					    'epoch' => $epoch,
 					    'severity' => $severity,
 					    'desc' => $desc });
 				}
@@ -102,6 +107,8 @@ if ($nocache || &cache_expired($current_cache_file)) {
 					    $software::packages{$i,'name'},
 					  'version' =>
 					    $software::packages{$i,'version'},
+					  'epoch' =>
+					    $software::packages{$i,'epoch'},
 					  'desc' =>
 					    $software::packages{$i,'desc'},
 					  'package' => $p,
@@ -137,6 +144,8 @@ for(my $i=0; $i<$n; $i++) {
 	push(@rv, { 'name' => $software::packages{$i,'name'},
 		    'version' =>
 		      $software::packages{$i,'version'},
+		    'epoch' =>
+		      $software::packages{$i,'epoch'},
 		    'desc' =>
 		      $software::packages{$i,'desc'},
 		    'package' => $pkgmap{$software::packages{$i,'name'}},
@@ -201,25 +210,14 @@ local $arr = &unserialise_variable($line);
 return @$arr;
 }
 
-# compare_versions(ver1, ver2)
-# Returns -1 if ver1 is older than ver2, 1 if newer, 0 if same
+# compare_versions(&pkg1, &pk2)
+# Returns -1 if the version of pkg1 is older than pkg2, 1 if newer, 0 if same
 sub compare_versions
 {
-local @sp1 = split(/[\.\-]/, $_[0]);
-local @sp2 = split(/[\.\-]/, $_[1]);
-for(my $i=0; $i<@sp1 || $i<@sp2; $i++) {
-	local $v1 = $sp1[$i];
-	local $v2 = $sp2[$i];
-	local $comp;
-	if ($v1 =~ /^\d+$/ && $v2 =~ /^\d+$/) {
-		$comp = $v1 <=> $v2;
-		}
-	else {
-		$comp = $v1 cmp $v2;
-		}
-	return $comp if ($comp);
-	}
-return 0;
+local ($pkg1, $pkg2) = @_;
+local $ec = $pkg1->{'epoch'} <=> $pkg2->{'epoch'};
+return $ec ||
+       &software::compare_versions($pkg1->{'version'}, $pkg2->{'version'});
 }
 
 sub find_cron_job
@@ -334,7 +332,7 @@ else {
 			}
 		local ($curr) = grep { $_->{'name'} eq $dname } @current;
 		if (!$curr ||
-		    &compare_versions($curr->{'version'}, $dver) < 0) {
+		    &compare_versions($curr, { 'version' => $dver }) < 0) {
 			# We need this dependency!
 			print &text('update_depend', $dname, $dver),"<br>\n";
 			print "<ul>\n";
@@ -411,18 +409,20 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
 	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
 	($u) = grep { $_->{'name'} eq $c->{'name'} } @updates;
-	if ($u && &compare_versions($u->{'version'}, $c->{'version'}) > 0 &&
-	    $a && &compare_versions($a->{'version'}, $u->{'version'}) >= 0) {
+	if ($u && &compare_versions($u, $c) > 0 &&
+	    $a && &compare_versions($a, $u) >= 0) {
 		# Security update is available
 		push(@rv, { 'name' => $a->{'name'},
 			    'version' => $a->{'version'},
+			    'epoch' => $a->{'epoch'},
 			    'desc' => $u->{'desc'},
 			    'severity' => $u->{'severity'} });
 		}
-	elsif (&compare_versions($a->{'version'}, $c->{'version'}) > 0) {
+	elsif (&compare_versions($a, $c) > 0) {
 		# A regular update is available
 		push(@rv, { 'name' => $a->{'name'},
 			    'version' => $a->{'version'},
+			    'epoch' => $a->{'epoch'},
 			    'desc' => $c->{'desc'} || $a->{'desc'},
 			    'severity' => 0 });
 		}
