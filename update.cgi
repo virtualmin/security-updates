@@ -6,6 +6,7 @@ require './security-updates-lib.pl';
 
 if ($in{'refresh'}) {
 	# Clear all caches
+	unlink($current_cache_file);
 	unlink($updates_cache_file);
 	unlink($available_cache_file);
 	&redirect("");

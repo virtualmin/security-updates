@@ -166,8 +166,8 @@ if ($nocache || &cache_expired($available_cache_file)) {
 	foreach my $p (@update_packages) {
 		local @pkgs = split(/\s+/, &package_resolve($p));
 		foreach my $pn (@pkgs) {
-			local @avail = grep { $_->{'name'} =~ /^$pn$/ } @avail;
-			foreach my $avail (@avail) {
+			local @mavail = grep { $_->{'name'} =~ /^$pn$/ } @avail;
+			foreach my $avail (@mavail) {
 				$avail->{'package'} = $p;
 				push(@rv, $avail);
 				}
@@ -270,7 +270,39 @@ sub packages_available
 {
 if (defined(&software::update_system_available)) {
 	# From a decent package system
-	return &software::update_system_available();
+	local @rv = software::update_system_available();
+	local %done;
+	foreach my $p (@rv) {
+		$p->{'system'} = $software::update_system;
+		$done{$p->{'name'}} = $p;
+		}
+	if ($software::update_system eq "yum" &&
+	    &has_command("up2date")) {
+		# YUM is the package system select, but up2date is installed
+		# too (ie. RHEL). Fetch its packages too..
+		if (!$done_rhn_lib++) {
+			do "../software/rhn-lib.pl";
+			}
+		local @rhnrv = &update_system_available();
+		foreach my $p (@rhnrv) {
+			$p->{'system'} = "rhn";
+			local $d = $done{$p->{'name'}};
+			if ($d) {
+				# Seen already .. but is this better?
+				if (&compare_versions($p, $d) > 0) {
+					# Yes .. replace
+					@rv = grep { $_ ne $d } @rv;
+					push(@rv, $p);
+					$done{$p->{'name'}} = $p;
+					}
+				}
+			else {
+				push(@rv, $p);
+				$done{$p->{'name'}} = $p;
+				}
+			}
+		}
+	return @rv;
 	}
 else {
 	# From virtualmin's server
@@ -290,7 +322,8 @@ else {
 					    'file' => $file,
 					    'depends' => $deps eq "none" ? [ ] :
 						[ split(/;/, $deps) ],
-					    'desc' => $desc });
+					    'desc' => $desc,
+					    'system' => 'virtualmin', });
 				}
 			}
 		}
@@ -304,8 +337,22 @@ sub package_install
 {
 local ($name) = @_;
 local @rv;
+local ($pkg) = grep { $_->{'name'} eq $name } &list_available();
 if (defined(&software::update_system_install)) {
-	@rv = &software::update_system_install($name);
+	if ($software::update_system eq $pkg->{'system'}) {
+		# Can use the default system
+		@rv = &software::update_system_install($name);
+		}
+	else {
+		# Another update system exists!! Use it..
+		if (!$done_rhn_lib++) {
+			do "../software/$pkg->{'system'}-lib.pl";
+			}
+		if (!$done_rhn_text++) {
+			%text = ( %text, %software::text );
+			}
+		@rv = &update_system_install($name);
+		}
 	}
 else {
 	# Need to download and install manually, and print out result.
