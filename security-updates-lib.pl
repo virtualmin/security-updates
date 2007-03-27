@@ -339,6 +339,7 @@ local ($name) = @_;
 local @rv;
 local ($pkg) = grep { $_->{'name'} eq $name } &list_available();
 if (defined(&software::update_system_install)) {
+	&clean_environment();
 	if ($software::update_system eq $pkg->{'system'}) {
 		# Can use the default system
 		@rv = &software::update_system_install($name);
@@ -353,6 +354,7 @@ if (defined(&software::update_system_install)) {
 			}
 		@rv = &update_system_install($name);
 		}
+	&reset_environment();
 	}
 else {
 	# Need to download and install manually, and print out result.
