@@ -2,4 +2,5 @@ postgresql	postgresql postgresql-server rh-postgresql rh-postgresql-server perl-
 mysql		mysql mysql-server perl-DBD-MySQL
 perl		perl mod_perl
 php5		php
+fcgid		mod_fcgid
 virtualmin-modules	wbm-.* wbt-.* ubm-.* ubt-.*

@@ -7,4 +7,5 @@ openssl		openssl libnet-ssleay-perl
 php4		php4 php4-cgi libapache2-mod-php4
 php5		php5 php5-cgi libapache2-mod-php5
 apache		apache2
+fcgid		libapache2-mod-fcgid
 virtualmin-modules	webmin-.* usermin-.*

@@ -13,7 +13,7 @@ do '../ui-lib.pl';
 		     "postgresql", "proftpd", "clamav", "php4", "mailman",
 		     "subversion", "python", "ruby", "irb", "rdoc",
 		     "openssl", "perl", "php5", "webmin", "usermin",
-		     "virtualmin-modules",
+		     "fcgid", "virtualmin-modules",
 		   ); 
 
 $security_cache_file = "$module_config_directory/security.cache";
