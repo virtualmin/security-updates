@@ -5,7 +5,7 @@ $no_acl_check++;
 require './security-updates-lib.pl';
 
 # See what needs doing
-@updates = &list_updates(1);
+@updates = &list_security_updates(1);
 @current = &list_current(1);
 @avail = &list_available(1);
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
