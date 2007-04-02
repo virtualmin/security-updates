@@ -446,7 +446,8 @@ return ($licence{'SerialNumber'}, $licence{'LicenseKey'});
 # list_possible_updates([nocache])
 # Returns a list of updates that are available. Each element in the array
 # is a hash ref containing a name, version, description and severity flag.
-# Intended for calling from themes.
+# Intended for calling from themes. Nocache 0=cache everything, 1=flush all
+# caches, 2=flush only current
 sub list_possible_updates
 {
 local ($nocache) = @_;
