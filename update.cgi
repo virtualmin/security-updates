@@ -29,8 +29,16 @@ else {
 	else {
 		print $text{'update_failed'},"<p>\n";
 		}
+
+	# Refresh collected package info
+	if (&foreign_check("virtual-server")) {
+		&foreign_require("virtual-server", "virtual-server-lib.pl");
+		if (defined(&virtual_server::refresh_possible_packages)) {
+			&virtual_server::refresh_possible_packages(\@got);
+			}
+		}
+
 	&webmin_log("update", "packages", scalar(@got),
 		    { 'got' => \@got });
-
 	&ui_print_footer("", $text{'index_return'});
 	}
