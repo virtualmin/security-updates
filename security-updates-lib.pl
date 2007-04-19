@@ -118,6 +118,13 @@ if ($nocache || &cache_expired($current_cache_file)) {
 				}
 			}
 		}
+
+	# Filter out dupes and sort by name
+	@rv = sort { $a->{'name'} cmp $b->{'name'} ||
+		     &compare_versions($b, $a) } @rv;
+	local %done;
+	@rv = grep { !$done{$_->{'name'}}++ } @rv;
+
 	&write_cache_file($current_cache_file, \@rv);
 	return @rv;
 	}
