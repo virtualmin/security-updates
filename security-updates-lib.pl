@@ -101,7 +101,7 @@ if ($nocache || &cache_expired($current_cache_file)) {
 		foreach my $pn (@pkgs) {
 			for(my $i=0; $i<$n; $i++) {
 				if ($software::packages{$i,'name'} =~ /^$pn$/) {
-					# Found it!
+					# Found a match
 					push(@rv, {
 					  'name' =>
 					    $software::packages{$i,'name'},
@@ -113,7 +113,6 @@ if ($nocache || &cache_expired($current_cache_file)) {
 					    $software::packages{$i,'desc'},
 					  'package' => $p,
 					  });
-					last;
 					}
 				}
 			}
