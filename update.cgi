@@ -17,10 +17,11 @@ else {
 	@pkgs || &error($text{'update_enone'});
 	&ui_print_unbuffered_header(undef, $text{'update_title'}, "");
 
-	foreach my $p (@pkgs) {
+	foreach my $ps (@pkgs) {
+		($p, $s) = split(/\//, $ps);
 		print &text('update_pkg', "<tt>$p</tt>"),"<br>\n";
 		print "<ul>\n";
-		push(@got, &package_install($p));
+		push(@got, &package_install($p, $s));
 		print "</ul><br>\n";
 		}
 	if (@got) {
@@ -31,7 +32,7 @@ else {
 		}
 
 	# Refresh collected package info
-	if (&foreign_check("virtual-server")) {
+	if (&foreign_check("virtual-server") && @got) {
 		&foreign_require("virtual-server", "virtual-server-lib.pl");
 		if (defined(&virtual_server::refresh_possible_packages)) {
 			&virtual_server::refresh_possible_packages(\@got);

@@ -16,6 +16,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		if (&compare_versions($a, $u) >= 0) {
 			# And an update is available
 			push(@todo, { 'name' => $c->{'name'},
+				      'update' => $a->{'update'},
 				      'version' => $a->{'version'},
 				      'desc' => $u->{'desc'},
 				      'level' => 1 });
@@ -23,17 +24,19 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		else {
 			# Not available
 			push(@todo, { 'name' => $c->{'name'},
+				      'update' => $a->{'update'},
 				      'version' => $a->{'version'},
 				      'desc' => $u->{'desc'},
 				      'level' => 0 });
 			}
 		}
-	elsif (&compare_versions($a, $c) > 0) {
+	elsif ($a->{'version'} && &compare_versions($a, $c) > 0) {
 		# An update is available
 		push(@todo, { 'name' => $c->{'name'},
-				 'version' => $a->{'version'},
-				 'desc' => "New version released",
-				 'level' => 2 });
+			      'update' => $a->{'update'},
+			      'version' => $a->{'version'},
+			      'desc' => "New version released",
+			      'level' => 2 });
 		}
 	}
 
@@ -43,7 +46,7 @@ foreach $t (@todo) {
 		# Can install
 		$body .= "An update to $t->{'name'} $t->{'version'} is needed : $t->{'desc'}\n";
 		($out, $done) = &capture_function_output(
-				  \&package_install, $t->{'name'});
+				  \&package_install, $t->{'update'});
 		if (@$done) {
 			$body .= "This update has been successfully installed.\n\n";
 			}

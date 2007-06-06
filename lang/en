@@ -26,6 +26,7 @@ index_euser=You do not have a Virtualmin licence file
 index_eauth=Your Virtualmin licence is not valid
 index_refresh=Refresh Available Packages
 index_noupdate=No update exists from version $1
+index_webmin=Webmin module $1
 
 update_title=Update Packages
 update_pkg=Now updating $1 ..
@@ -36,6 +37,12 @@ update_edownload=.. could not download $1 : $2
 update_einstall=Install failed : $1
 update_efound=Could not find $1 in available packages list.
 update_depend=Installing dependency $1 $2 ..
+update_wdownload=Downloading Webmin module $1 ..
+update_ewdownload=.. failed : $1
+update_wdownloaded=.. download complete
+update_winstall=Installing Webmin module $1 ..
+update_winstalled=.. installation complete
+update_ewinstall=.. install failed : $1
 
 sched_title=Scheduled Update
 sched_yes=Scheduled checking for updates is now active.

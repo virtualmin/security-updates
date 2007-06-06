@@ -26,8 +26,10 @@ print &ui_columns_start([ "", $text{'index_name'},
 $sft = &foreign_available("software");
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
-	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
-	($u) = grep { $_->{'name'} eq $c->{'name'} } @updates;
+	($a) = grep { $_->{'name'} eq $c->{'name'} &&
+		      $_->{'system'} eq $c->{'system'} } @avail;
+	($u) = grep { $_->{'name'} eq $c->{'name'} &&
+		      $_->{'system'} eq $c->{'system'} } @updates;
 	if ($u && &compare_versions($u, $c) > 0) {
 		# A security problem was detected
 		if (&compare_versions($a, $u) >= 0) {
@@ -51,6 +53,10 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		       &text('index_new', $a->{'version'})."</font></b>";
 		$need = 1;
 		}
+	elsif (!$a->{'version'} && $c->{'updateonly'}) {
+		# No update exists, and we don't care unless there is one
+		next;
+		}
 	elsif (!$a->{'version'}) {
 		# No update exists
 		$msg = "<font color=#ffaa00><b>".
@@ -63,11 +69,12 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		$need = 0;
 		}
 	print &ui_checked_columns_row([
-		$sft ? "<a href='../software/edit_pack.cgi?package=".
+		$sft && !$c->{'webmin'} ?
+		  "<a href='../software/edit_pack.cgi?package=".
 		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $c->{'name'},
 		$c->{'desc'},
 		$msg ],
-		\@tds, "u", $c->{'name'}, $need);
+		\@tds, "u", $c->{'update'}."/".$c->{'system'}, $need);
 	}
 print &ui_columns_end();
 print &ui_links_row(\@links);

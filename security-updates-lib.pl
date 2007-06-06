@@ -1,19 +1,18 @@
 # Functions for checking for security updates of core Virtualmin packages
-# XXX need to setup software.virtualmin.com with packages?
-# XXX other packages?
 
 do '../web-lib.pl';
 &init_config();
 do '../ui-lib.pl';
 &foreign_require("software", "software-lib.pl");
 &foreign_require("cron", "cron-lib.pl");
+&foreign_require("webmin", "webmin-lib.pl");
 
 @update_packages = ( "apache", "postfix", "sendmail", "bind", "procmail",
 		     "spamassassin", "logrotate", "webalizer", "mysql",
 		     "postgresql", "proftpd", "clamav", "php4", "mailman",
 		     "subversion", "python", "ruby", "irb", "rdoc",
 		     "openssl", "perl", "php5", "webmin", "usermin",
-		     "fcgid", "virtualmin-modules",
+		     "fcgid", "awstats", "virtualmin-modules",
 		   ); 
 
 $security_cache_file = "$module_config_directory/security.cache";
@@ -89,7 +88,13 @@ else {
 
 # list_current(nocache)
 # Returns a list of packages and versions for the core packages managed
-# by this module.
+# by this module. Return keys are :
+#  name - The local package name (ie. CSWapache2)
+#  update - Name used to refer to it by the updates system (ie. apache2)
+#  version - Version number
+#  epoch - Epoch part of the version
+#  desc - Human-readable description
+#  package - Original generic program, like apache
 sub list_current
 {
 local ($nocache) = @_;
@@ -99,10 +104,16 @@ if ($nocache || &cache_expired($current_cache_file)) {
 	foreach my $p (@update_packages) {
 		local @pkgs = split(/\s+/, &package_resolve($p));
 		foreach my $pn (@pkgs) {
+			my $updatepn = $pn;
+			$pn = &csw_to_pkgadd($pn);
 			for(my $i=0; $i<$n; $i++) {
 				if ($software::packages{$i,'name'} =~ /^$pn$/) {
 					# Found a match
 					push(@rv, {
+					  'update' =>
+					    $updatepn eq $pn ? 
+						$software::packages{$i,'name'} :
+						$updatepn,
 					  'name' =>
 					    $software::packages{$i,'name'},
 					  'version' =>
@@ -112,7 +123,9 @@ if ($nocache || &cache_expired($current_cache_file)) {
 					  'desc' =>
 					    $software::packages{$i,'desc'},
 					  'package' => $p,
+					  'system' => $software::update_system,
 					  });
+					&fix_pkgadd_version($rv[$#rv]);
 					}
 				}
 			}
@@ -122,7 +135,18 @@ if ($nocache || &cache_expired($current_cache_file)) {
 	@rv = sort { $a->{'name'} cmp $b->{'name'} ||
 		     &compare_versions($b, $a) } @rv;
 	local %done;
-	@rv = grep { !$done{$_->{'name'}}++ } @rv;
+	@rv = grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
+
+	# Add installed Webmin modules
+	foreach my $minfo (&get_all_module_infos()) {
+		push(@rv, { 'name' => $minfo->{'dir'},
+			    'update' => $minfo->{'dir'},
+			    'desc' => &text('index_webmin', $minfo->{'desc'}),
+			    'version' => $minfo->{'version'},
+			    'system' => 'webmin',
+			    'updateonly' => 1,
+			  });
+		}
 
 	&write_cache_file($current_cache_file, \@rv);
 	return @rv;
@@ -155,7 +179,9 @@ for(my $i=0; $i<$n; $i++) {
 		    'desc' =>
 		      $software::packages{$i,'desc'},
 		    'package' => $pkgmap{$software::packages{$i,'name'}},
+		    'system' => $software::update_system,
 		});
+	&fix_pkgadd_version($rv[$#rv]);
 	}
 return @rv;
 }
@@ -167,6 +193,7 @@ sub list_available
 {
 local ($nocache) = @_;
 if ($nocache || &cache_expired($available_cache_file)) {
+	# Get from update system
 	local @rv;
 	local @avail = &packages_available();
 	foreach my $p (@update_packages) {
@@ -174,11 +201,20 @@ if ($nocache || &cache_expired($available_cache_file)) {
 		foreach my $pn (@pkgs) {
 			local @mavail = grep { $_->{'name'} =~ /^$pn$/ } @avail;
 			foreach my $avail (@mavail) {
+				$avail->{'update'} = $avail->{'name'};
+				$avail->{'name'} = &csw_to_pkgadd(
+							$avail->{'name'});
 				$avail->{'package'} = $p;
 				push(@rv, $avail);
 				}
 			}
 		}
+
+	if (&include_webmin_modules()) {
+		# Get from Webmin updates services
+		push(@rv, &webmin_modules_available());
+		}
+
 	&write_cache_file($available_cache_file, \@rv);
 	return @rv;
 	}
@@ -265,7 +301,7 @@ if (open(RESOLV, "$module_root_directory/resolve.$realos-$realver") ||
 if (defined(&software::update_system_resolve)) {
 	return &software::update_system_resolve($name);
 	}
-return undef;
+return $name;
 }
 
 # packages_available()
@@ -280,6 +316,7 @@ if (defined(&software::update_system_available)) {
 	local %done;
 	foreach my $p (@rv) {
 		$p->{'system'} = $software::update_system;
+		$p->{'version'} =~ s/,REV=.*//i;		# For CSW
 		$done{$p->{'name'}} = $p;
 		}
 	if ($software::update_system eq "yum" &&
@@ -337,14 +374,49 @@ else {
 	}
 }
 
-# package_install(package)
-# Install some package, either from an update system or from Virtualmin
+# package_install(package, [system])
+# Install some package, either from an update system or from Virtualmin. Returns
+# a list of updated package names.
 sub package_install
 {
-local ($name) = @_;
+local ($name, $system) = @_;
 local @rv;
-local ($pkg) = grep { $_->{'name'} eq $name } &list_available();
-if (defined(&software::update_system_install)) {
+local ($pkg) = grep { $_->{'update'} eq $name &&
+		      ($_->{'system'} eq $system || !$system) }
+		    &list_available();
+if ($pkg->{'system'} eq 'webmin') {
+	# Webmin module, which we can download and install 
+	local ($host, $port, $page, $ssh) =
+		&parse_http_url($pkg->{'updatesurl'});
+	local ($mhost, $mport, $mpage, $mssl) =
+		&parse_http_url($pkg->{'url'}, $host, $port, $page, $ssl);
+	local $mfile;
+	($mfile = $mpage) =~ s/^(.*)\///;
+	local $mtemp = &transname($mfile);
+	local $error;
+	print "$pkg->{'url'} under $pkg->{'updatesurl'}<p>\n";
+	print &text('update_wdownload', $pkg->{'name'}),"<br>\n";
+	&http_download($mhost, $mport, $mpage, $mtemp, \$error, undef, $mssl,
+		       $webmin::config{'upuser'}, $webmin::config{'uppass'});
+	if ($error) {
+		print &text('update_ewdownload', $error),"<p>\n";
+		return ( );
+		}
+	print $text{'update_wdownloaded'},"<p>\n";
+
+	# Install the module
+	print &text('update_winstall', $pkg->{'name'}),"<br>\n";
+	local $irv = &webmin::install_webmin_module($mtemp, 1, 0);
+	if (!ref($irv)) {
+		print &text('update_ewinstall', $irv),"<p>\n";
+		}
+	else {
+		print $text{'update_winstalled'},"<p>\n";
+		}
+	@rv = map { /([^\/]+)$/; $1 } @{$irv->[1]};
+	}
+elsif (defined(&software::update_system_install)) {
+	# Using some update system, like YUM or APT
 	&clean_environment();
 	if ($software::update_system eq $pkg->{'system'}) {
 		# Can use the default system
@@ -364,7 +436,9 @@ if (defined(&software::update_system_install)) {
 	}
 else {
 	# Need to download and install manually, and print out result.
-	local ($pkg) = grep { $_->{'name'} eq $name } &packages_available();
+	local ($pkg) = grep { $_->{'name'} eq $name &&
+		      	      ($_->{'system'} eq $system || !$system) }
+			    &packages_available();
 	if (!$pkg) {
 		print &text('update_efound', $name),"<br>\n";
 		return ( );
@@ -438,6 +512,7 @@ else {
 	}
 # Flush installed cache
 unlink($current_cache_file);
+return @rv;
 }
 
 # get_user_pass()
@@ -463,24 +538,108 @@ local @current = &list_current($nocache);
 local @avail = &list_available($nocache == 1);
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
-	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
-	($u) = grep { $_->{'name'} eq $c->{'name'} } @updates;
+	($a) = grep { $_->{'name'} eq $c->{'name'} &&
+		      $_->{'system'} eq $c->{'system'} } @avail;
+	($u) = grep { $_->{'name'} eq $c->{'name'} &&
+		      $_->{'system'} eq $c->{'system'} } @updates;
 	if ($u && &compare_versions($u, $c) > 0 &&
 	    $a && &compare_versions($a, $u) >= 0) {
 		# Security update is available
 		push(@rv, { 'name' => $a->{'name'},
+			    'update' => $a->{'update'},
 			    'version' => $a->{'version'},
 			    'epoch' => $a->{'epoch'},
 			    'desc' => $u->{'desc'},
 			    'severity' => $u->{'severity'} });
 		}
-	elsif (&compare_versions($a, $c) > 0) {
+	elsif ($a->{'version'} && &compare_versions($a, $c) > 0) {
 		# A regular update is available
 		push(@rv, { 'name' => $a->{'name'},
+			    'update' => $a->{'update'},
 			    'version' => $a->{'version'},
 			    'epoch' => $a->{'epoch'},
 			    'desc' => $c->{'desc'} || $a->{'desc'},
 			    'severity' => 0 });
+		}
+	}
+return @rv;
+}
+
+# csw_to_pkgadd(package)
+# On Solaris systems, convert a CSW package name like ap2_modphp5 to a
+# real package name like CSWap2modphp5
+sub csw_to_pkgadd
+{
+local ($pn) = @_;
+if ($gconfig{'os_type'} eq 'solaris') {
+	$pn =~ s/[_\-]//g;
+	$pn = "CSW$pn";
+	}
+return $pn;
+}
+
+# fix_pkgadd_version(&package)
+# If this is Solaris and the package version is missing, we need to make 
+# a separate pkginfo call to get it.
+sub fix_pkgadd_version
+{
+local ($pkg) = @_;
+if (!$pkg->{'version'} && $gconfig{'os_type'} eq 'solaris') {
+	local @pinfo = &software::package_info($pkg->{'name'});
+	$pinfo[4] =~ s/,REV=.*//i;
+	$pkg->{'version'} = $pinfo[4];
+	}
+$pkg->{'desc'} =~ s/^$pkg->{'update'}\s+\-\s+//;
+}
+
+# include_webmin_modules()
+# Returns 1 if we should include Webmin modules in the list of updates. True
+# only for tar.gz installs.
+sub include_webmin_modules
+{
+local $type = &read_file_contents("$root_directory/install-type");
+chop($type);
+return !$type && !&webmin::shared_root_directory();
+}
+
+# webmin_modules_available()
+# Returns a list of Webmin modules available for update
+sub webmin_modules_available
+{
+local @rv;
+local @urls = $webmin::config{'upsource'} ?
+			split(/\t+/, $webmin::config{'upsource'}) :
+			( $webmin::update_url );
+local %donewebmin;
+foreach my $url (@urls) {
+	local ($updates, $host, $port, $page, $ssl) =
+	    &webmin::fetch_updates($url, $webmin::config{'upuser'},
+					 $webmin::config{'uppass'});
+	foreach $u (@$updates) {
+		# Skip modules that are not for this version of Webmin, IF this
+		# is a core module or is not installed
+		local %minfo = &get_module_info($u->[0]);
+		local %tinfo = &get_theme_info($u->[0]);
+		local %info = %minfo ? %minfo : %tinfo;
+		next if (($u->[1] >= &webmin::get_webmin_base_version() + .01 ||
+			  $u->[1] < &webmin::get_webmin_base_version()) &&
+			 (!%info || $info{'longdesc'} ||
+			  !$webmin::config{'upthird'}));
+
+		# Skip if not supported on this OS
+		local $osinfo = { 'os_support' => $u->[3] };
+		next if (!&check_os_support($osinfo));
+
+		next if ($donewebmin{$u->[0],$u->[1]}++);
+		push(@rv, { 'update' => $u->[0],
+			    'name' => $u->[0],
+			    'system' => 'webmin',
+			    'desc' => &text('index_webmin',
+				$tinfo{'desc'} || $minfo{'desc'} || $u->[4]),
+			    'version' => $u->[1],
+			    'updatesurl' => $url,
+			    'url' => $u->[2],
+			   });
 		}
 	}
 return @rv;
