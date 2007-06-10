@@ -43,6 +43,16 @@ update_wdownloaded=.. download complete
 update_winstall=Installing Webmin module $1 ..
 update_winstalled=.. installation complete
 update_ewinstall=.. install failed : $1
+update_tgzdownload=Downloading latest version of $1 ..
+update_tgzdownloaded=.. downloaded $1
+update_tgzuntar=Extracting archive file ..
+update_ecurdir=.. could not get current install directory!
+update_econfigdir=.. could not find current configuration directory!
+update_etgzuntar=.. extraction failed! See the error message above for the reason why
+update_tgzuntardone=.. done
+update_tgzsetup=Running setup script ..
+update_tgzsetupdone=.. upgrade complete
+update_etgzsetup=.. upgrade failed! See the error message above for the reason why
 
 sched_title=Scheduled Update
 sched_yes=Scheduled checking for updates is now active.

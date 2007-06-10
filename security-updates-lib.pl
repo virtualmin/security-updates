@@ -26,6 +26,10 @@ $virtualmin_dir = "/updates/$gconfig{'os_type'}";
 $virtualmin_list = "$virtualmin_dir/index.txt";
 $virtualmin_security = "$virtualmin_dir/security.txt";
 $virtualmin_licence = "/etc/virtualmin-license";
+$webmin_version_path = "/wbm/webmin-version";
+$usermin_version_path = "/wbm/usermin-version";
+$webmin_download_path = "/wbm/webmin-current.tar.gz";
+$usermin_download_path = "/wbm/usermin-current.tar.gz";
 
 # test_connection()
 # Returns undef if we can connect OK, or an error message
@@ -137,15 +141,42 @@ if ($nocache || &cache_expired($current_cache_file)) {
 	local %done;
 	@rv = grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
 
-	# Add installed Webmin modules
-	foreach my $minfo (&get_all_module_infos()) {
-		push(@rv, { 'name' => $minfo->{'dir'},
-			    'update' => $minfo->{'dir'},
-			    'desc' => &text('index_webmin', $minfo->{'desc'}),
-			    'version' => $minfo->{'version'},
-			    'system' => 'webmin',
+	if (&include_webmin_modules()) {
+		# Add installed Webmin modules
+		foreach my $minfo (&get_all_module_infos()) {
+			push(@rv, { 'name' => $minfo->{'dir'},
+				    'update' => $minfo->{'dir'},
+				    'desc' => &text('index_webmin',
+						    $minfo->{'desc'}),
+				    'version' => $minfo->{'version'},
+				    'system' => 'webmin',
+				    'updateonly' => 1,
+				  });
+			}
+
+		# Add an entry for Webmin itself
+		push(@rv, { 'name' => 'webmin',
+			    'update' => 'webmin',
+			    'desc' => 'Webmin Package',
+			    'version' => &get_webmin_version(),
+			    'system' => 'tgz',
 			    'updateonly' => 1,
 			  });
+
+		# If Usermin is installed from a tgz, add it too
+		if (&foreign_installed("usermin")) {
+			&foreign_require("usermin", "usermin-lib.pl");
+			if (!&usermin::get_install_type()) {
+				push(@rv, { 'name' => 'usermin',
+					    'update' => 'usermin',
+					    'desc' => 'Usermin Package',
+					    'version' =>
+						&usermin::get_usermin_version(),
+					    'system' => 'tgz',
+					    'updateonly' => 1,
+					  });
+				}
+			}
 		}
 
 	&write_cache_file($current_cache_file, \@rv);
@@ -257,6 +288,10 @@ return @$arr;
 sub compare_versions
 {
 local ($pkg1, $pkg2) = @_;
+if ($pkg1->{'system'} eq 'webmin' && $pkg2->{'system'} eq 'webmin') {
+	# Webmin module version compares are always numeric
+	return $pkg1->{'version'} <=> $pkg2->{'version'};
+	}
 local $ec = $pkg1->{'epoch'} <=> $pkg2->{'epoch'};
 return $ec ||
        &software::compare_versions($pkg1->{'version'}, $pkg2->{'version'});
@@ -394,7 +429,6 @@ if ($pkg->{'system'} eq 'webmin') {
 	($mfile = $mpage) =~ s/^(.*)\///;
 	local $mtemp = &transname($mfile);
 	local $error;
-	print "$pkg->{'url'} under $pkg->{'updatesurl'}<p>\n";
 	print &text('update_wdownload', $pkg->{'name'}),"<br>\n";
 	&http_download($mhost, $mport, $mpage, $mtemp, \$error, undef, $mssl,
 		       $webmin::config{'upuser'}, $webmin::config{'uppass'});
@@ -414,6 +448,94 @@ if ($pkg->{'system'} eq 'webmin') {
 		print $text{'update_winstalled'},"<p>\n";
 		}
 	@rv = map { /([^\/]+)$/; $1 } @{$irv->[1]};
+	}
+elsif ($pkg->{'system'} eq 'tgz') {
+	# Tar file of Webmin or Usermin, which we have to download and
+	# install into the destination directory
+	local $temp = &transname($pkg->{'name'}."-".$pkg->{'version'}.
+				 ".tar.gz");
+	local $error;
+	print &text('update_tgzdownload', ucfirst($pkg->{'name'})),"<br>\n";
+	local ($user, $pass) = &get_user_pass();
+	local $path = $pkg->{'name'} eq 'webmin' ? $webmin_download_path
+						 : $usermin_download_path;
+	&http_download($virtualmin_host, $virtualmin_port, $path,
+		       $temp, \$error, undef, 0, $user, $pass);
+	if ($error || !-r $temp) {
+		print &text('update_ewdownload', $error),"<p>\n";
+		return ( );
+		}
+	else {
+		local @st = stat($temp);
+		print &text('update_tgzdownloaded', &nice_size($st[7])),"<p>\n";
+		}
+
+	# Get the current install directory
+	print $text{'update_tgzuntar'},"<br>\n";
+	local $curdir;
+	if ($pkg->{'name'} eq 'webmin') {
+		$curdir = $root_directory;
+		$pkg_config_dir = $config_directory;
+		}
+	else {
+		local %miniserv;
+		&foreign_require("usermin", "usermin-lib.pl");
+		&usermin::get_usermin_miniserv_config(\%miniserv);
+		$curdir = $miniserv{'root'};
+		$pkg_config_dir = $usermin::config{'usermin_dir'};
+		}
+	if (!$curdir || $curdir eq "/") {
+		print $text{'update_ecurdir'},"<p>\n";
+		return ( );
+		}
+	if (!-r "$pkg_config_dir/config") {
+		print $text{'update_econfigdir'},"<p>\n";
+		return ( );
+		}
+	local $targetdir = &read_file_contents("$pkg_config_dir/install-dir");
+	$targetdir =~ s/\r|\n//g;
+
+	# Un-tar the archive next to it
+	local $pardir = $curdir;
+	$pardir =~ s/\/([^\/]+)$//;
+	local $out = &backquote_command("cd ".quotemeta($pardir)." && ".
+					"gunzip -c $temp | tar xf -");
+	if ($?) {
+		local @lines = split(/\n/, $out);
+		while(@lines > 10) { shift(@lines); }  # Last 10 only
+		print "<pre>",&html_escape(join("\n", @lines)),"</pre>\n";
+		print $text{'update_etgzuntar'},"<p>\n";
+		return ( );
+		}
+	local $xtractdir = $pardir."/".$pkg->{'name'}."-".$pkg->{'version'};
+	print $text{'update_tgzuntardone'},"<p>\n";
+
+	# Save this CGI from being killed by the upgrade
+	$SIG{'TERM'} = 'IGNORE';
+
+	# Run setup.sh to upgrade
+	print $text{'update_tgzsetup'},"<br>\n";
+	print "<pre>";
+	&clean_environment();
+	&open_execute_command(SETUP, "cd $xtractdir && config_dir=$pkg_config_dir ./setup.sh $targetdir 2>&1 </dev/null", 1);
+	while(<SETUP>) {
+		print &html_escape($_);
+		}
+	close(SETUP);
+	print "</pre>\n";
+	&reset_environment();
+	if ($out =~ /ERROR/) {
+		print $text{'update_etgzsetup'},"<p>\n";
+		}
+	else {
+		print $text{'update_tgzsetupdone'},"<p>\n";
+		}
+
+	# Either way, delete the temporary directory
+	&execute_command("rm -rf ".quotemeta($xtractdir));
+	&unlink_file($temp);
+
+	@rv = ( $pkg->{'name'} );
 	}
 elsif (defined(&software::update_system_install)) {
 	# Using some update system, like YUM or APT
@@ -642,6 +764,34 @@ foreach my $url (@urls) {
 			   });
 		}
 	}
+
+# Add latest Webmin version available from Virtualmin
+local ($user, $pass) = &get_user_pass();
+local ($wver, $error);
+&http_download($virtualmin_host, $virtualmin_port, $webmin_version_path,
+	       \$wver, \$error, undef, 0, $user, $pass);
+$wver =~ s/\r|\n//g;
+if (!$error) {
+	push(@rv, { 'name' => 'webmin',
+		    'update' => 'webmin',
+		    'system' => 'tgz',
+		    'desc' => 'Webmin Package',
+		    'version' => $wver });
+	}
+
+# And Usermin
+local ($uver, $error);
+&http_download($virtualmin_host, $virtualmin_port, $usermin_version_path,
+	       \$uver, \$error, undef, 0, $user, $pass);
+$uver =~ s/\r|\n//g;
+if (!$error) {
+	push(@rv, { 'name' => 'usermin',
+		    'update' => 'usermin',
+		    'system' => 'tgz',
+		    'desc' => 'Usermin Package',
+		    'version' => $uver });
+	}
+
 return @rv;
 }
 
