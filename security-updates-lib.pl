@@ -10,7 +10,7 @@ do '../ui-lib.pl';
 @update_packages = ( "apache", "postfix", "sendmail", "bind", "procmail",
 		     "spamassassin", "logrotate", "webalizer", "mysql",
 		     "postgresql", "proftpd", "clamav", "php4", "mailman",
-		     "subversion", "python", "ruby", "irb", "rdoc",
+		     "subversion", "python", "ruby", "irb", "rdoc", "rubygems",
 		     "openssl", "perl", "php5", "webmin", "usermin",
 		     "fcgid", "awstats", "virtualmin-modules",
 		   ); 
