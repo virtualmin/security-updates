@@ -154,6 +154,18 @@ if ($nocache || &cache_expired($current_cache_file)) {
 				  });
 			}
 
+		# Add installed Webmin themes
+		foreach my $tinfo (&webmin::list_themes()) {
+			push(@rv, { 'name' => $tinfo->{'dir'},
+				    'update' => $tinfo->{'dir'},
+				    'desc' => &text('index_webmintheme',
+						    $tinfo->{'desc'}),
+				    'version' => $tinfo->{'version'},
+				    'system' => 'webmin',
+				    'updateonly' => 1,
+				  });
+			}
+
 		# Add an entry for Webmin itself
 		push(@rv, { 'name' => 'webmin',
 			    'update' => 'webmin',
