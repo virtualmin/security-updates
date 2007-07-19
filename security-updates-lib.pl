@@ -551,6 +551,10 @@ elsif ($pkg->{'system'} eq 'tgz') {
 		# Delete the extract directory, if we copied to elsewhere
 		&execute_command("rm -rf ".quotemeta($xtractdir));
 		}
+	elsif ($out !~ /ERROR/) {
+		# Delete the old directory
+		&execute_command("rm -rf ".quotemeta($curdir));
+		}
 	&unlink_file($temp);
 
 	@rv = ( $pkg->{'name'} );
