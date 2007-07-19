@@ -431,6 +431,10 @@ local @rv;
 local ($pkg) = grep { $_->{'update'} eq $name &&
 		      ($_->{'system'} eq $system || !$system) }
 		    &list_available();
+if (!$pkg) {
+	print &text('update_efindpkg', $name),"<p>\n";
+	return ( );
+	}
 if ($pkg->{'system'} eq 'webmin') {
 	# Webmin module, which we can download and install 
 	local ($host, $port, $page, $ssh) =
@@ -543,8 +547,10 @@ elsif ($pkg->{'system'} eq 'tgz') {
 		print $text{'update_tgzsetupdone'},"<p>\n";
 		}
 
-	# Either way, delete the temporary directory
-	&execute_command("rm -rf ".quotemeta($xtractdir));
+	if ($targetdir) {
+		# Delete the extract directory, if we copied to elsewhere
+		&execute_command("rm -rf ".quotemeta($xtractdir));
+		}
 	&unlink_file($temp);
 
 	@rv = ( $pkg->{'name'} );

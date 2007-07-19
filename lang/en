@@ -34,6 +34,7 @@ update_pkg=Now updating $1 ..
 update_done=Installed package $1 $2.
 update_ok=Successfully installed $1 packages.
 update_failed=No packages were installed. Check the messages above for the cause of the error.
+update_efindpkg=Could not find package to update named $1
 update_edownload=.. could not download $1 : $2
 update_einstall=Install failed : $1
 update_efound=Could not find $1 in available packages list.
