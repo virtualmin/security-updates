@@ -691,6 +691,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		# Security update is available
 		push(@rv, { 'name' => $a->{'name'},
 			    'update' => $a->{'update'},
+			    'system' => $a->{'system'},
 			    'version' => $a->{'version'},
 			    'epoch' => $a->{'epoch'},
 			    'desc' => $u->{'desc'},
@@ -700,6 +701,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		# A regular update is available
 		push(@rv, { 'name' => $a->{'name'},
 			    'update' => $a->{'update'},
+			    'system' => $a->{'system'},
 			    'version' => $a->{'version'},
 			    'epoch' => $a->{'epoch'},
 			    'desc' => $c->{'desc'} || $a->{'desc'},
