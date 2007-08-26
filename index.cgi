@@ -69,7 +69,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		$need = 0;
 		}
 	print &ui_checked_columns_row([
-		$sft && !$c->{'webmin'} ?
+		$sft && $c->{'system'} ne 'webmin' ?
 		  "<a href='../software/edit_pack.cgi?package=".
 		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $c->{'name'},
 		$c->{'desc'},

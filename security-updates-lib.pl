@@ -21,11 +21,13 @@ $current_cache_file = "$module_config_directory/current.cache";
 $cron_cmd = "$module_config_directory/update.pl";
 
 $virtualmin_host = $config{'host'} || "software.virtualmin.com";
+$server_manager_host = "vm2.virtualmin.com";
 $virtualmin_port = 80;
 $virtualmin_dir = "/updates/$gconfig{'os_type'}";
 $virtualmin_list = "$virtualmin_dir/index.txt";
 $virtualmin_security = "$virtualmin_dir/security.txt";
 $virtualmin_licence = "/etc/virtualmin-license";
+$server_manager_licence = "/etc/server-manager-license";
 $webmin_version_path = "/wbm/webmin-version";
 $usermin_version_path = "/wbm/usermin-version";
 $webmin_download_path = "/wbm/webmin-current.tar.gz";
@@ -35,10 +37,10 @@ $usermin_download_path = "/wbm/usermin-current.tar.gz";
 # Returns undef if we can connect OK, or an error message
 sub test_connection
 {
-local ($user, $pass) = &get_user_pass();
+local ($user, $pass, $host) = &get_user_pass();
 return $text{'index_euser'} if (!$user);
 local $error;
-&http_download($virtualmin_host, $virtualmin_port, $virtualmin_security,
+&http_download($host, $virtualmin_port, $virtualmin_security,
 	       \$list, \$error, undef, 0, $user, $pass);
 if ($error =~ /authorization|authentication/i) {
 	return $text{'index_eauth'};
@@ -660,12 +662,23 @@ return @rv;
 }
 
 # get_user_pass()
-# Returns the username and password to use for HTTP requests
+# Returns the username and password to use for HTTP requests, and the base site
 sub get_user_pass
 {
 local %licence;
-&read_env_file($virtualmin_licence, \%licence);
-return ($licence{'SerialNumber'}, $licence{'LicenseKey'});
+if (-r $virtualmin_licence) {
+	&read_env_file($virtualmin_licence, \%licence);
+	return ($licence{'SerialNumber'}, $licence{'LicenseKey'},
+		$virtualmin_host);
+	}
+elsif (-r $server_manager_licence) {
+	&read_env_file($server_manager_licence, \%licence);
+	return ($licence{'SerialNumber'}, $licence{'LicenseKey'},
+		$server_manager_host);
+	}
+else {
+	return ( );
+	}
 }
 
 # list_possible_updates([nocache])
