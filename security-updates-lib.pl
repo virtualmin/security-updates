@@ -12,7 +12,7 @@ do '../ui-lib.pl';
 		     "postgresql", "proftpd", "clamav", "php4", "mailman",
 		     "subversion", "python", "ruby", "irb", "rdoc", "rubygems",
 		     "openssl", "perl", "php5", "webmin", "usermin",
-		     "fcgid", "awstats", "virtualmin-modules",
+		     "fcgid", "awstats", "dovecot", "virtualmin-modules",
 		   ); 
 
 $security_cache_file = "$module_config_directory/security.cache";
@@ -260,6 +260,10 @@ if ($nocache || &cache_expired($available_cache_file)) {
 		push(@rv, &webmin_modules_available());
 		}
 
+	if (!@rv) {
+		# Failed .. fall back to cache
+		@rv = &read_cache_file($available_cache_file);
+		}
 	&write_cache_file($available_cache_file, \@rv);
 	return @rv;
 	}
