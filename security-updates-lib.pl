@@ -143,7 +143,8 @@ if ($nocache || &cache_expired($current_cache_file)) {
 	local %done;
 	@rv = grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
 
-	if (&include_webmin_modules()) {
+	local $incwebmin = &include_webmin_modules();
+	if ($incwebmin) {
 		# Add installed Webmin modules
 		foreach my $minfo (&get_all_module_infos()) {
 			push(@rv, { 'name' => $minfo->{'dir'},
@@ -168,28 +169,37 @@ if ($nocache || &cache_expired($current_cache_file)) {
 				  });
 			}
 
-		# Add an entry for Webmin itself
-		push(@rv, { 'name' => 'webmin',
-			    'update' => 'webmin',
-			    'desc' => 'Webmin Package',
-			    'version' => &get_webmin_version(),
-			    'system' => 'tgz',
-			    'updateonly' => 1,
-			  });
+		# Add an entry for Webmin itself, but only if this was
+		# a tar.gz install
+		if ($incwebmin != 2) {
+			push(@rv, { 'name' => 'webmin',
+				    'update' => 'webmin',
+				    'desc' => 'Webmin Package',
+				    'version' => &get_webmin_version(),
+				    'system' => 'tgz',
+				    'updateonly' => 1,
+				  });
+			}
+		else {
+			# Remove Webmin from the list, as YUM sometimes
+			# includes it in the 'yum list' output even though
+			# it cannot actual do an update!
+			@rv = grep { $_->{'name'} ne 'webmin' } @rv;
+			}
 
 		# If Usermin is installed from a tgz, add it too
-		if (&foreign_installed("usermin")) {
-			&foreign_require("usermin", "usermin-lib.pl");
-			if (!&usermin::get_install_type()) {
-				push(@rv, { 'name' => 'usermin',
-					    'update' => 'usermin',
-					    'desc' => 'Usermin Package',
-					    'version' =>
-						&usermin::get_usermin_version(),
-					    'system' => 'tgz',
-					    'updateonly' => 1,
-					  });
-				}
+		if (&include_usermin_modules() == 1) {
+			push(@rv, { 'name' => 'usermin',
+				    'update' => 'usermin',
+				    'desc' => 'Usermin Package',
+				    'version' =>
+					&usermin::get_usermin_version(),
+				    'system' => 'tgz',
+				    'updateonly' => 1,
+				  });
+			}
+		else {
+			@rv = grep { $_->{'name'} ne 'usermin' } @rv;
 			}
 		}
 
@@ -256,7 +266,10 @@ if ($nocache || &cache_expired($available_cache_file)) {
 		}
 
 	if (&include_webmin_modules()) {
-		# Get from Webmin updates services
+		# Get from Webmin updates services. We exclude Webmin and
+		# Usermin for now, as they cannot be updated via YUM.
+		@rv = grep { $_->{'name'} ne 'webmin' &&
+			     $_->{'name'} ne 'usermin' } @rv;
 		push(@rv, &webmin_modules_available());
 		}
 
@@ -756,13 +769,60 @@ $pkg->{'desc'} =~ s/^$pkg->{'update'}\s+\-\s+//;
 }
 
 # include_webmin_modules()
-# Returns 1 if we should include Webmin modules in the list of updates. True
-# only for tar.gz installs.
+# Returns 1 if we should include all Webmin modules and the program itself in
+# the list of updates. Returns 2 if only non-core modules should be included.
+# The first case is selected when you have a tar.gz install, while the second
+# corresponds to a rpm or deb install with Virtualmin modules added.
 sub include_webmin_modules
 {
+return 0 if (&webmin::shared_root_directory());
 local $type = &read_file_contents("$root_directory/install-type");
 chop($type);
-return !$type && !&webmin::shared_root_directory();
+if (!$type) {
+	# Webmin tar.gz install
+	return 1;
+	}
+else {
+	# How was virtual-server installed?
+	return 0 if (!&foreign_check("virtual-server"));
+	local $vtype = &read_file_contents(
+		&module_root_directory("virtual-server")."/install-type");
+	chop($vtype);
+	if (!$vtype) {
+		# A tar.gz install ... which we may be able to update
+		return 2;
+		}
+	return 0;
+	}
+}
+
+# include_usermin_modules()
+# Returns 1 if Usermin was installed from a tar.gz, 2 if installed from an
+# RPM but virtualmin-specific modules were from a tar.gz
+sub include_usermin_modules
+{
+if (&foreign_installed("usermin")) {
+	&foreign_require("usermin", "usermin-lib.pl");
+	local $type = &usermin::get_install_type();
+	if (!$type) {
+		# Usermin tar.gz install
+		return 1;
+		}
+	else {
+		# How was virtual-server-theme installed?
+		local %miniserv;
+		&usermin::get_usermin_miniserv_config(\%miniserv);
+		local $vtype = &read_file_contents(
+			"$miniserv{'root'}/virtual-server-theme/install-type");
+		chop($vtype);
+		if (!$vtype) {
+			# A tar.gz install ... which we may be able to update
+			return 2;
+			}
+		return 0;
+		}
+	}
+return 0;
 }
 
 # webmin_modules_available()
@@ -806,31 +866,36 @@ foreach my $url (@urls) {
 		}
 	}
 
-# Add latest Webmin version available from Virtualmin
+# Add latest Webmin version available from Virtualmin, but only if was a
+# tar.gz install
 local ($user, $pass) = &get_user_pass();
-local ($wver, $error);
-&http_download($virtualmin_host, $virtualmin_port, $webmin_version_path,
-	       \$wver, \$error, undef, 0, $user, $pass);
-$wver =~ s/\r|\n//g;
-if (!$error) {
-	push(@rv, { 'name' => 'webmin',
-		    'update' => 'webmin',
-		    'system' => 'tgz',
-		    'desc' => 'Webmin Package',
-		    'version' => $wver });
+if (&include_webmin_modules() == 1) {
+	local ($wver, $error);
+	&http_download($virtualmin_host, $virtualmin_port, $webmin_version_path,
+		       \$wver, \$error, undef, 0, $user, $pass);
+	$wver =~ s/\r|\n//g;
+	if (!$error) {
+		push(@rv, { 'name' => 'webmin',
+			    'update' => 'webmin',
+			    'system' => 'tgz',
+			    'desc' => 'Webmin Package',
+			    'version' => $wver });
+		}
 	}
 
 # And Usermin
-local ($uver, $error);
-&http_download($virtualmin_host, $virtualmin_port, $usermin_version_path,
-	       \$uver, \$error, undef, 0, $user, $pass);
-$uver =~ s/\r|\n//g;
-if (!$error) {
-	push(@rv, { 'name' => 'usermin',
-		    'update' => 'usermin',
-		    'system' => 'tgz',
-		    'desc' => 'Usermin Package',
-		    'version' => $uver });
+if (&include_usermin_modules() == 1) {
+	local ($uver, $error);
+	&http_download($virtualmin_host, $virtualmin_port,$usermin_version_path,
+		       \$uver, \$error, undef, 0, $user, $pass);
+	$uver =~ s/\r|\n//g;
+	if (!$error) {
+		push(@rv, { 'name' => 'usermin',
+			    'update' => 'usermin',
+			    'system' => 'tgz',
+			    'desc' => 'Usermin Package',
+			    'version' => $uver });
+		}
 	}
 
 return @rv;
