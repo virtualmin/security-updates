@@ -37,6 +37,7 @@ $usermin_download_path = "/wbm/usermin-current.tar.gz";
 # Returns undef if we can connect OK, or an error message
 sub test_connection
 {
+return undef if (&free_virtualmin_licence());	# GPL install
 local ($user, $pass, $host) = &get_user_pass();
 return $text{'index_euser'} if (!$user);
 local $error;
@@ -61,6 +62,7 @@ sub list_security_updates
 local ($nocache) = @_;
 if ($nocache || &cache_expired($security_cache_file)) {
 	local ($list, @rv, $error);
+	return ( ) if (&free_virtualmin_licence());	# GPL install
 	local ($user, $pass) = &get_user_pass();
 	&http_download($virtualmin_host, $virtualmin_port, $virtualmin_security,
 		       \$list, \$error, undef, 0, $user, $pass);
@@ -698,6 +700,17 @@ else {
 	}
 }
 
+# free_virtualmin_licence()
+# Returns 1 if this is a GPL/free install of Virtualmin
+sub free_virtualmin_licence
+{
+if (-r $virtualmin_licence) {
+	&read_env_file($virtualmin_licence, \%licence);
+	return 1 if ($licence{'SerialNumber'} eq 'GPL');
+	}
+return 0;
+}
+
 # list_possible_updates([nocache])
 # Returns a list of updates that are available. Each element in the array
 # is a hash ref containing a name, version, description and severity flag.
@@ -868,8 +881,9 @@ foreach my $url (@urls) {
 
 # Add latest Webmin version available from Virtualmin, but only if was a
 # tar.gz install
+local $free = free_virtualmin_licence();
 local ($user, $pass) = &get_user_pass();
-if (&include_webmin_modules() == 1) {
+if (!$free && &include_webmin_modules() == 1) {
 	local ($wver, $error);
 	&http_download($virtualmin_host, $virtualmin_port, $webmin_version_path,
 		       \$wver, \$error, undef, 0, $user, $pass);
@@ -884,7 +898,7 @@ if (&include_webmin_modules() == 1) {
 	}
 
 # And Usermin
-if (&include_usermin_modules() == 1) {
+if (!$free && &include_usermin_modules() == 1) {
 	local ($uver, $error);
 	&http_download($virtualmin_host, $virtualmin_port,$usermin_version_path,
 		       \$uver, \$error, undef, 0, $user, $pass);
