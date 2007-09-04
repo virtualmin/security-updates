@@ -9,8 +9,10 @@ require './security-updates-lib.pl';
 @current = &list_current(1);
 @avail = &list_available(1);
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
-	($a) = grep { $_->{'name'} eq $c->{'name'} } @avail;
-	($u) = grep { $_->{'name'} eq $c->{'name'} } @updates;
+	($a) = grep { $_->{'name'} eq $c->{'name'} &&
+		      $_->{'system'} eq $c->{'system'} } @avail;
+	($u) = grep { $_->{'name'} eq $c->{'name'} &&
+		      $_->{'system'} eq $c->{'system'} } @updates;
 	if ($u && &compare_versions($u, $c) > 0) {
 		# A security problem was detected
 		if (&compare_versions($a, $u) >= 0) {
