@@ -885,9 +885,11 @@ foreach my $url (@urls) {
 		local %minfo = &get_module_info($u->[0]);
 		local %tinfo = &get_theme_info($u->[0]);
 		local %info = %minfo ? %minfo : %tinfo;
+		local $noinstall = !%info &&
+				   $u->[0] !~ /(virtualmin|virtual-server)-/;
 		next if (($u->[1] >= &webmin::get_webmin_base_version() + .01 ||
 			  $u->[1] < &webmin::get_webmin_base_version()) &&
-			 (!%info || $info{'longdesc'} ||
+			 ($noinstall || $info{'longdesc'} ||
 			  !$webmin::config{'upthird'}));
 
 		# Skip if not supported on this OS
@@ -898,8 +900,8 @@ foreach my $url (@urls) {
 		push(@rv, { 'update' => $u->[0],
 			    'name' => $u->[0],
 			    'system' => 'webmin',
-			    'desc' => &text('index_webmin',
-				$tinfo{'desc'} || $minfo{'desc'} || $u->[4]),
+			    'desc' => $u->[4] || &text('index_webmin',
+					$tinfo{'desc'} || $minfo{'desc'}),
 			    'version' => $u->[1],
 			    'updatesurl' => $url,
 			    'url' => $u->[2],
