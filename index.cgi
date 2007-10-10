@@ -24,13 +24,17 @@ print &ui_columns_start([ "", $text{'index_name'},
 			  $text{'index_desc'},
 			  $text{'index_status'} ], \@tds);
 $sft = &foreign_available("software");
-foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
+foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
+	next if ($done{$p->{'name'},$p->{'system'}}++);	# May be in both lists
+
 	# Work out the status
-	($a) = grep { $_->{'name'} eq $c->{'name'} &&
-		      $_->{'system'} eq $c->{'system'} } @avail;
-	($u) = grep { $_->{'name'} eq $c->{'name'} &&
-		      $_->{'system'} eq $c->{'system'} } @updates;
-	if ($u && &compare_versions($u, $c) > 0) {
+	($c) = grep { $_->{'name'} eq $p->{'name'} &&
+		      $_->{'system'} eq $p->{'system'} } @current;
+	($a) = grep { $_->{'name'} eq $p->{'name'} &&
+		      $_->{'system'} eq $p->{'system'} } @avail;
+	($u) = grep { $_->{'name'} eq $p->{'name'} &&
+		      $_->{'system'} eq $p->{'system'} } @updates;
+	if ($u && $c && &compare_versions($u, $c) > 0) {
 		# A security problem was detected
 		if (&compare_versions($a, $u) >= 0) {
 			# And an update is available
@@ -47,11 +51,17 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 			$need = 0;
 			}
 		}
-	elsif (&compare_versions($a, $c) > 0) {
+	elsif ($a && $c && &compare_versions($a, $c) > 0) {
 		# An update is available
 		$msg = "<b><font color=#00aa00>".
 		       &text('index_new', $a->{'version'})."</font></b>";
 		$need = 1;
+		}
+	elsif ($a && !$c) {
+		# Could be installed, but isn't currently
+		next if (!&installation_candiate($a));
+		$msg = "<font color=#00aa00>$text{'index_caninstall'}</font>";
+		$need = 0;
 		}
 	elsif (!$a->{'version'} && $c->{'updateonly'}) {
 		# No update exists, and we don't care unless there is one
@@ -69,12 +79,13 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		$need = 0;
 		}
 	print &ui_checked_columns_row([
-		$sft && $c->{'system'} ne 'webmin' ?
+		$c && $sft && $c->{'system'} ne 'webmin' &&
+		 $c->{'system'} ne 'tgz' ?
 		  "<a href='../software/edit_pack.cgi?package=".
-		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $c->{'name'},
-		$c->{'desc'},
+		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $p->{'name'},
+		$p->{'desc'},
 		$msg ],
-		\@tds, "u", $c->{'update'}."/".$c->{'system'}, $need);
+		\@tds, "u", $p->{'update'}."/".$p->{'system'}, $need);
 	}
 print &ui_columns_end();
 print &ui_links_row(\@links);

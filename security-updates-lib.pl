@@ -262,6 +262,8 @@ if ($nocache || &cache_expired($available_cache_file)) {
 				$avail->{'name'} = &csw_to_pkgadd(
 							$avail->{'name'});
 				$avail->{'package'} = $p;
+				$avail->{'desc'} ||=
+					&generate_description($avail->{'name'});
 				push(@rv, $avail);
 				}
 			}
@@ -723,6 +725,7 @@ local @rv;
 local @updates = &list_security_updates($nocache == 1);
 local @current = &list_current($nocache);
 local @avail = &list_available($nocache == 1);
+local ($a, $c, $u);
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
 	($a) = grep { $_->{'name'} eq $c->{'name'} &&
@@ -748,6 +751,31 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 			    'version' => $a->{'version'},
 			    'epoch' => $a->{'epoch'},
 			    'desc' => $c->{'desc'} || $a->{'desc'},
+			    'severity' => 0 });
+		}
+	}
+return @rv;
+}
+
+# list_possible_installs([nocache])
+# Returns a list of packages that could be installed, but are not yet
+sub list_possible_installs
+{
+local ($nocache) = @_;
+local @rv;
+local @current = &list_current($nocache);
+local @avail = &list_available($nocache == 1);
+local ($a, $c);
+foreach $a (sort { $a->{'name'} cmp $b->{'name'} } @avail) {
+	($c) = grep { $_->{'name'} eq $a->{'name'} &&
+		      $_->{'system'} eq $a->{'system'} } @current;
+	if (!$c && &installation_candiate($a)) {
+		push(@rv, { 'name' => $a->{'name'},
+			    'update' => $a->{'update'},
+			    'system' => $a->{'system'},
+			    'version' => $a->{'version'},
+			    'epoch' => $a->{'epoch'},
+			    'desc' => $a->{'desc'},
 			    'severity' => 0 });
 		}
 	}
@@ -913,6 +941,62 @@ if (!$free && &include_usermin_modules() == 1) {
 	}
 
 return @rv;
+}
+
+# installation_candiate(&package)
+# Returns 1 if some package can be installed, even when it currently isn't.
+# For now, only Virtualmin plugins are considered.
+sub installation_candiate
+{
+local ($p) = @_;
+if (!defined($webmin_install_type_cache)) {
+	$webmin_install_type_cache = &webmin::get_install_type();
+	}
+if (!defined($usermin_install_type_cache)) {
+	&foreign_require("usermin", "usermin-lib.pl");
+	$usermin_install_type_cache = &usermin::get_install_type();
+	}
+return # RPM packages from YUM
+       $p->{'system'} eq 'yum' &&
+       $p->{'name'} =~ /^(wbm|usm|wbt|ust)-(virtualmin|virtual-server)/ &&
+       $webmin_install_type_cache eq 'rpm' ||
+
+       # Debian packages from APT
+       $p->{'system'} eq 'apt' &&
+       $p->{'name'} =~ /^(webmin|usermin)-(virtualmin|virtual-server)/ &&
+       $webmin_install_type_cache eq 'deb' ||
+
+       # Webmin modules from .wbms
+       $p->{'system'} eq 'webmin' &&
+       $p->{'name'} =~ /^(virtualmin|virtual-server)/ &&
+       !$webmin_install_type_cache ||
+
+       # Usermin modules from .wbms
+       $p->{'system'} eq 'usermin' &&
+       $p->{'name'} =~ /^(virtualmin|virtual-server)/ &&
+       !$usermin_install_type_cache;
+}
+
+# generate_description(package)
+# Fakes up a description for a Webmin/Usermin module/theme package
+sub generate_description
+{
+local ($name) = @_;
+return # RPM names
+       $name =~ /^wbm-virtualmin-/ ? "Virtualmin plugin" :
+       $name =~ /^wbm-/ ? "Webmin module" :
+       $name =~ /^wbt-virtualmin-/ ? "Virtualmin theme" :
+       $name =~ /^wbt-/ ? "Webmin theme" :
+       $name =~ /^usm-/ ? "Usermin module" :
+       $name =~ /^ust-/ ? "Usermin theme" :
+
+       # Debian names
+       $name =~ /^webmin-virtualmin-/ ? "Virtualmin plugin or theme" :
+       $name =~ /^webmin-/ ? "Webmin module" :
+       $name =~ /^usermin-virtualmin-/ ? "Usermin theme" :
+       $name =~ /^usermin-/ ? "Usermin module" :
+
+       undef;
 }
 
 1;

@@ -26,6 +26,7 @@ index_euser=You do not have a Virtualmin licence file
 index_eauth=Your Virtualmin licence is not valid
 index_refresh=Refresh Available Packages
 index_noupdate=No update exists from version $1
+index_caninstall=Available for installation
 index_webmin=Webmin module $1
 index_webmintheme=Webmin theme $1
 
