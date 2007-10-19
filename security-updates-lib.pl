@@ -328,6 +328,11 @@ if ($pkg1->{'system'} eq 'webmin' && $pkg2->{'system'} eq 'webmin') {
 	return $pkg1->{'version'} <=> $pkg2->{'version'};
 	}
 local $ec = $pkg1->{'epoch'} <=> $pkg2->{'epoch'};
+if ($ec && ($pkg1->{'epoch'} eq '' || $pkg2->{'epoch'} eq '') &&
+    $pkg1->{'system'} eq 'apt') {
+	# On some Debian systems, we don't have a local epoch
+	$ec = undef;
+	}
 return $ec ||
        &software::compare_versions($pkg1->{'version'}, $pkg2->{'version'});
 }
