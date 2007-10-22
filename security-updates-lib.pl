@@ -34,6 +34,7 @@ $webmin_download_path = "/wbm/webmin-current.tar.gz";
 $usermin_download_path = "/wbm/usermin-current.tar.gz";
 
 $yum_cache_file = "$module_config_directory/yumcache";
+$apt_cache_file = "$module_config_directory/aptcache";
 
 # test_connection()
 # Returns undef if we can connect OK, or an error message
@@ -1017,6 +1018,26 @@ if ($p->{'system'} eq 'yum') {
 	$desc =~ s/^\s+//;
 	$yumcache{$p->{'name'}."-".$p->{'version'}} = $desc;
 	&write_file($yum_cache_file, \%yumcache);
+	return $desc if ($desc =~ /\S/);
+	}
+elsif ($p->{'system'} eq 'apt') {
+	# Use APT to get description
+	local %aptcache;
+	&read_file_cached($apt_cache_file, \%aptcache);
+	if ($aptcache{$p->{'name'}."-".$p->{'version'}}) {
+		return $aptcache{$p->{'name'}."-".$p->{'version'}};
+		}
+	local ($desc, $started_desc);
+	open(YUM, "apt-cache show ".quotemeta($name)." |");
+	while(<YUM>) {
+		s/\r|\n//g;
+		if (/^Description:\s*(.*)$/) {
+			$desc = $1;
+			}
+		}
+	close(YUM);
+	$aptcache{$p->{'name'}."-".$p->{'version'}} = $desc;
+	&write_file($apt_cache_file, \%aptcache);
 	return $desc if ($desc =~ /\S/);
 	}
 
