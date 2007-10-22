@@ -33,6 +33,8 @@ $usermin_version_path = "/wbm/usermin-version";
 $webmin_download_path = "/wbm/webmin-current.tar.gz";
 $usermin_download_path = "/wbm/usermin-current.tar.gz";
 
+$yum_cache_file = "$module_config_directory/yumcache";
+
 # test_connection()
 # Returns undef if we can connect OK, or an error message
 sub test_connection
@@ -262,8 +264,10 @@ if ($nocache || &cache_expired($available_cache_file)) {
 				$avail->{'name'} = &csw_to_pkgadd(
 							$avail->{'name'});
 				$avail->{'package'} = $p;
-				$avail->{'desc'} ||=
-					&generate_description($avail->{'name'});
+				if (&installation_candiate($avail)) {
+					$avail->{'desc'} ||=
+						&generate_description($avail);
+					}
 				push(@rv, $avail);
 				}
 			}
@@ -988,7 +992,34 @@ return # RPM packages from YUM
 # Fakes up a description for a Webmin/Usermin module/theme package
 sub generate_description
 {
-local ($name) = @_;
+local ($p) = @_;
+local $name = $p->{'name'};
+if ($p->{'system'} eq 'yum') {
+	# Use yum info to get the description, and cache it
+	local %yumcache;
+	&read_file_cached($yum_cache_file, \%yumcache);
+	if ($yumcache{$p->{'name'}."-".$p->{'version'}}) {
+		return $yumcache{$p->{'name'}."-".$p->{'version'}};
+		}
+	local ($desc, $started_desc);
+	open(YUM, "yum info ".quotemeta($name)." |");
+	while(<YUM>) {
+		s/\r|\n//g;
+		if (/^Description:\s*(.*)$/) {
+			$desc = $1;
+			$started_desc = 1;
+			}
+		elsif (/\S/ && $started_desc) {
+			$desc .= " ".$_;
+			}
+		}
+	close(YUM);
+	$desc =~ s/^\s+//;
+	$yumcache{$p->{'name'}."-".$p->{'version'}} = $desc;
+	&write_file($yum_cache_file, \%yumcache);
+	return $desc if ($desc =~ /\S/);
+	}
+
 return # RPM names
        $name =~ /^wbm-virtualmin-/ ? "Virtualmin plugin" :
        $name =~ /^wbm-/ ? "Webmin module" :
