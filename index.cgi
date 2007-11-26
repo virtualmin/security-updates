@@ -4,6 +4,7 @@
 require './security-updates-lib.pl';
 &ui_print_header(undef, $module_info{'desc'}, "", undef, 1, 1);
 &error_setup($text{'index_err'});
+&ReadParse();
 
 # Make sure we can connect
 $err = &test_connection();
@@ -13,16 +14,23 @@ if ($err) {
 	exit;
 	}
 
+# Show mode selector (all, updates only, updates and new)
+$in{'mode'} ||= 'both';
+foreach $m ('all', 'updates', 'new', 'both') {
+	$mmsg = $text{'index_mode_'.$m};
+	if ($in{'mode'} eq $m) {
+		push(@mlinks, "<b>$mmsg</b>");
+		}
+	else {
+		push(@mlinks, "<a href='index.cgi?mode=$m'>$mmsg</a>");
+		}
+	}
+print $text{'index_mode'}," ",&ui_links_row(\@mlinks),"<p>\n";
+
+# Work out what packages to show
 @updates = &list_security_updates();
 @current = &list_current(1);
 @avail = &list_available();
-print &ui_form_start("update.cgi");
-@tds = ( "width=5" );
-@links = ( &select_all_link("u"), &select_invert_link("u") );
-print &ui_links_row(\@links);
-print &ui_columns_start([ "", $text{'index_name'},
-			  $text{'index_desc'},
-			  $text{'index_status'} ], \@tds);
 $sft = &foreign_available("software");
 foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 	next if ($done{$p->{'name'},$p->{'system'}}++);	# May be in both lists
@@ -50,18 +58,24 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 				     $u->{'desc'})."</font></b>";
 			$need = 0;
 			}
+		next if ($in{'mode'} ne 'both' && $in{'mode'} ne 'updates' &&
+			 $in{'mode'} ne 'all');
 		}
 	elsif ($a && $c && &compare_versions($a, $c) > 0) {
 		# An update is available
 		$msg = "<b><font color=#00aa00>".
 		       &text('index_new', $a->{'version'})."</font></b>";
 		$need = 1;
+		next if ($in{'mode'} ne 'both' && $in{'mode'} ne 'updates' &&
+			 $in{'mode'} ne 'all');
 		}
 	elsif ($a && !$c) {
 		# Could be installed, but isn't currently
 		next if (!&installation_candiate($a));
 		$msg = "<font color=#00aa00>$text{'index_caninstall'}</font>";
 		$need = 0;
+		next if ($in{'mode'} ne 'both' && $in{'mode'} ne 'new' &&
+			 $in{'mode'} ne 'all');
 		}
 	elsif (!$a->{'version'} && $c->{'updateonly'}) {
 		# No update exists, and we don't care unless there is one
@@ -72,26 +86,45 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		$msg = "<font color=#ffaa00><b>".
 			&text('index_noupdate', $c->{'version'})."</b></font>";
 		$need = 0;
+		next if ($in{'mode'} ne 'all');
 		}
 	else {
 		# We have the latest
 		$msg = &text('index_ok', $c->{'version'});
 		$need = 0;
+		next if ($in{'mode'} ne 'all');
 		}
-	print &ui_checked_columns_row([
+	push(@rows, [ [
 		$c && $sft && $c->{'system'} ne 'webmin' &&
 		 $c->{'system'} ne 'tgz' ?
 		  "<a href='../software/edit_pack.cgi?package=".
 		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $p->{'name'},
 		$p->{'desc'},
 		$msg ],
-		\@tds, "u", $p->{'update'}."/".$p->{'system'}, $need);
+		\@tds, "u", $p->{'update'}."/".$p->{'system'}, $need ]);
 	}
-print &ui_columns_end();
-print &ui_links_row(\@links);
-print &ui_form_end([ [ "ok", $text{'index_update'} ],
-		     undef,
-		     [ "refresh", $text{'index_refresh'} ] ]);
+
+# Show the packages, if any
+if (@rows) {
+	print &ui_form_start("update.cgi");
+	@tds = ( "width=5" );
+	@links = ( &select_all_link("u"), &select_invert_link("u") );
+	print &ui_links_row(\@links);
+	print &ui_columns_start([ "", $text{'index_name'},
+				  $text{'index_desc'},
+				  $text{'index_status'} ], \@tds);
+	foreach $r (@rows) {
+		print &ui_checked_columns_row(@$r);
+		}
+	print &ui_columns_end();
+	print &ui_links_row(\@links);
+	print &ui_form_end([ [ "ok", $text{'index_update'} ],
+			     undef,
+			     [ "refresh", $text{'index_refresh'} ] ]);
+	}
+else {
+	print "<b>",$text{'index_none_'.$in{'mode'}},"</b><p>\n";
+	}
 
 # Show scheduled report form
 print "<hr>\n";
