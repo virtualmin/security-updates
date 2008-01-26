@@ -13,7 +13,7 @@ if ($in{'refresh'}) {
 	}
 else {
 	# Upgrade some packages
-	@pkgs = split(/\0/, $in{'u'});
+	my @pkgs = split(/\0/, $in{'u'});
 	@pkgs || &error($text{'update_enone'});
 	&ui_print_unbuffered_header(undef, $text{'update_title'}, "");
 
