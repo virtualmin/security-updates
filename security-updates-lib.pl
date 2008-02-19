@@ -566,7 +566,7 @@ elsif ($pkg->{'system'} eq 'tgz') {
 	print $text{'update_tgzsetup'},"<br>\n";
 	print "<pre>";
 	&clean_environment();
-	&open_execute_command(SETUP, "cd $xtractdir && config_dir=$pkg_config_dir ./setup.sh $targetdir 2>&1 </dev/null", 1);
+	&open_execute_command(SETUP, "cd $xtractdir && config_dir=$pkg_config_dir autothird=1 ./setup.sh $targetdir 2>&1 </dev/null", 1);
 	while(<SETUP>) {
 		print &html_escape($_);
 		}
