@@ -7,6 +7,7 @@ index_bad=Update to version $1 advised : $2
 index_new=New version $1 is available
 index_ok=Running latest version $1
 index_update=Update Selected Packages
+index_install=Install Selected Packages
 index_return=package list
 index_header=Scheduled checking options
 index_sched=Check for updates on schedule?

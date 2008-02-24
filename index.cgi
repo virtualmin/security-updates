@@ -118,7 +118,8 @@ if (@rows) {
 		}
 	print &ui_columns_end();
 	print &ui_links_row(\@links);
-	print &ui_form_end([ [ "ok", $text{'index_update'} ],
+	print &ui_form_end([ [ "ok", $in{'mode'} eq 'new' ?
+				$text{'index_install'} :$text{'index_update'} ],
 			     undef,
 			     [ "refresh", $text{'index_refresh'} ] ]);
 	}
