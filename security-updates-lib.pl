@@ -1058,5 +1058,17 @@ return # RPM names
        undef;
 }
 
+# clear_repository_cache()
+# Clear any YUM or APT caches
+sub clear_repository_cache
+{
+if ($software::update_system eq "yum") {
+	&execute_command("yum clean all");
+	}
+elsif ($software::update_system eq "apt") {
+	&execute_command("apt-get update");
+	}
+}
+
 1;
 

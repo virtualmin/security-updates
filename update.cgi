@@ -9,6 +9,11 @@ if ($in{'refresh'}) {
 	unlink($current_cache_file);
 	unlink($updates_cache_file);
 	unlink($available_cache_file);
+
+	# Clean YUM or APT cache, and re-fetch
+	&clear_repository_cache();
+	&list_available();
+
 	&redirect("");
 	}
 else {
