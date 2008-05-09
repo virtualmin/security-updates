@@ -269,6 +269,7 @@ if ($nocache || &cache_expired($available_cache_file)) {
 					$avail->{'desc'} ||=
 						&generate_description($avail);
 					}
+				&set_pinned_version($avail);
 				push(@rv, $avail);
 				}
 			}
@@ -324,7 +325,7 @@ return @$arr;
 }
 
 # compare_versions(&pkg1, &pk2)
-# Returns -1 if the version of pkg1 is older than pkg2, 1 if newer, 0 if same
+# Returns -1 if the version of pkg1 is older than pkg2, 1 if newer, 0 if same.
 sub compare_versions
 {
 local ($pkg1, $pkg2) = @_;
@@ -1068,6 +1069,33 @@ if ($software::update_system eq "yum") {
 elsif ($software::update_system eq "apt") {
 	&execute_command("apt-get update");
 	}
+}
+
+# set_pinned_version(&package)
+# Given an APT package from the available, use apt-cache policy to check if it
+# should have the version number reduced to the pinned version.
+sub set_pinned_version
+{
+local ($pkg) = @_;
+return 0 if ($pkg->{'system'} ne 'apt');
+return 0 if (!-r "/etc/apt/preferences");	# No pinning configured
+local $qp = quotemeta($pkg->{'name'});
+local $out = &backquote_command("apt-cache policy $qp 2>/dev/null");
+local $installed = $out =~ /Installed:\s+(\S+)/ ? $1 : undef;
+local $candidate = $out =~ /Candidate:\s+(\S+)/ ? $1 : undef;
+$candidate = "" if ($candidate eq "(none)");
+if ($installed && $candidate) {
+	local $cepoch;
+	if ($candidate =~ s/^(\d+)://) {
+		$cepoch = $1;
+		}
+	if ($pkg->{'version'} ne $candidate) {
+		$pkg->{'version'} = $candidate;
+		$pkg->{'epoch'} = $cepoch;
+		}
+	return 1;
+	}
+return 0;
 }
 
 1;
