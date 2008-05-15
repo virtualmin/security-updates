@@ -18,6 +18,7 @@ do '../ui-lib.pl';
 $security_cache_file = "$module_config_directory/security.cache";
 $available_cache_file = "$module_config_directory/available.cache";
 $current_cache_file = "$module_config_directory/current.cache";
+$current_all_cache_file = "$module_config_directory/current-all.cache";
 $cron_cmd = "$module_config_directory/update.pl";
 
 $virtualmin_host = $config{'host'} || "software.virtualmin.com";
@@ -118,26 +119,25 @@ if ($nocache || &cache_expired($current_cache_file)) {
 			my $updatepn = $pn;
 			$pn = &csw_to_pkgadd($pn);
 			for(my $i=0; $i<$n; $i++) {
-				if ($software::packages{$i,'name'} =~ /^$pn$/) {
-					# Found a match
-					push(@rv, {
-					  'update' =>
-					    $updatepn eq $pn ? 
-						$software::packages{$i,'name'} :
-						$updatepn,
-					  'name' =>
-					    $software::packages{$i,'name'},
-					  'version' =>
-					    $software::packages{$i,'version'},
-					  'epoch' =>
-					    $software::packages{$i,'epoch'},
-					  'desc' =>
-					    $software::packages{$i,'desc'},
-					  'package' => $p,
-					  'system' => $software::update_system,
-					  });
-					&fix_pkgadd_version($rv[$#rv]);
-					}
+				next if ($software::packages{$i,'name'}
+					 !~ /^$pn$/);
+				push(@rv, {
+				  'update' =>
+				    $updatepn eq $pn ? 
+					$software::packages{$i,'name'} :
+					$updatepn,
+				  'name' =>
+				    $software::packages{$i,'name'},
+				  'version' =>
+				    $software::packages{$i,'version'},
+				  'epoch' =>
+				    $software::packages{$i,'epoch'},
+				  'desc' =>
+				    $software::packages{$i,'desc'},
+				  'package' => $p,
+				  'system' => $software::update_system,
+				  });
+				&fix_pkgadd_version($rv[$#rv]);
 				}
 			}
 		}
@@ -221,61 +221,82 @@ else {
 sub list_all_current
 {
 local ($nocache) = @_;
-local $n = &software::list_packages();
-local @rv;
-local %pkgmap;
-foreach my $p (@update_packages) {
-	local @pkgs = split(/\s+/, &package_resolve($p));
-	foreach my $pn (@pkgs) {
-		$pkgmap{$pn} = $p;
+local ($nocache) = @_;
+if ($nocache || &cache_expired($current_all_cache_file)) {
+	local $n = &software::list_packages();
+	local @rv;
+	local %pkgmap;
+	foreach my $p (@update_packages) {
+		local @pkgs = split(/\s+/, &package_resolve($p));
+		foreach my $pn (@pkgs) {
+			$pkgmap{$pn} = $p;
+			}
 		}
+	for(my $i=0; $i<$n; $i++) {
+		push(@rv, { 'name' => $software::packages{$i,'name'},
+			    'update' => $software::packages{$i,'name'},
+			    'version' =>
+			      $software::packages{$i,'version'},
+			    'epoch' =>
+			      $software::packages{$i,'epoch'},
+			    'desc' =>
+			      $software::packages{$i,'desc'},
+			    'package' => $pkgmap{$software::packages{$i,'name'}},
+			    'system' => $software::update_system,
+			});
+		&fix_pkgadd_version($rv[$#rv]);
+		}
+	&write_cache_file($current_all_cache_file, \@rv);
+	return @rv;
 	}
-for(my $i=0; $i<$n; $i++) {
-	push(@rv, { 'name' => $software::packages{$i,'name'},
-		    'version' =>
-		      $software::packages{$i,'version'},
-		    'epoch' =>
-		      $software::packages{$i,'epoch'},
-		    'desc' =>
-		      $software::packages{$i,'desc'},
-		    'package' => $pkgmap{$software::packages{$i,'name'}},
-		    'system' => $software::update_system,
-		});
-	&fix_pkgadd_version($rv[$#rv]);
+else {
+	return &read_cache_file($current_all_cache_file);
 	}
-return @rv;
 }
 
-# list_available(nocache)
+# list_available(nocache, all)
 # Returns the names and versions of packages available from the update
 # system, that we are interested in.
 sub list_available
 {
-local ($nocache) = @_;
-if ($nocache || &cache_expired($available_cache_file)) {
+local ($nocache, $all) = @_;
+if ($nocache || &cache_expired($available_cache_file.int($all))) {
 	# Get from update system
 	local @rv;
 	local @avail = &packages_available();
-	foreach my $p (@update_packages) {
-		local @pkgs = split(/\s+/, &package_resolve($p));
-		foreach my $pn (@pkgs) {
-			local @mavail = grep { $_->{'name'} =~ /^$pn$/ } @avail;
-			foreach my $avail (@mavail) {
-				$avail->{'update'} = $avail->{'name'};
-				$avail->{'name'} = &csw_to_pkgadd(
-							$avail->{'name'});
-				$avail->{'package'} = $p;
-				if (&installation_candiate($avail)) {
-					$avail->{'desc'} ||=
-						&generate_description($avail);
+	if (!$all) {
+		# Limit to packages Virtualmin cares about
+		foreach my $p (@update_packages) {
+			local @pkgs = split(/\s+/, &package_resolve($p));
+			foreach my $pn (@pkgs) {
+				local @mavail = grep { $_->{'name'} =~ /^$pn$/ }
+						     @avail;
+				foreach my $avail (@mavail) {
+					$avail->{'update'} = $avail->{'name'};
+					$avail->{'name'} =
+					    &csw_to_pkgadd($avail->{'name'});
+					$avail->{'package'} = $p;
+					if (&installation_candiate($avail)) {
+						$avail->{'desc'} ||=
+						  &generate_description($avail);
+						}
+					&set_pinned_version($avail);
+					push(@rv, $avail);
 					}
-				&set_pinned_version($avail);
-				push(@rv, $avail);
 				}
 			}
 		}
+	else {
+		# All on system
+		foreach my $avail (@avail) {
+			$avail->{'update'} = $avail->{'name'};
+			$avail->{'name'} = &csw_to_pkgadd($avail->{'name'});
+			&set_pinned_version($avail);
+			push(@rv, $avail);
+			}
+		}
 
-	if (&include_webmin_modules()) {
+	if (!$all && &include_webmin_modules()) {
 		# Get from Webmin updates services. We exclude Webmin and
 		# Usermin for now, as they cannot be updated via YUM.
 		@rv = grep { $_->{'name'} ne 'webmin' &&
@@ -285,13 +306,13 @@ if ($nocache || &cache_expired($available_cache_file)) {
 
 	if (!@rv) {
 		# Failed .. fall back to cache
-		@rv = &read_cache_file($available_cache_file);
+		@rv = &read_cache_file($available_cache_file.int($all));
 		}
-	&write_cache_file($available_cache_file, \@rv);
+	&write_cache_file($available_cache_file.int($all), \@rv);
 	return @rv;
 	}
 else {
-	return &read_cache_file($available_cache_file);
+	return &read_cache_file($available_cache_file.int($all));
 	}
 }
 
@@ -455,16 +476,16 @@ else {
 	}
 }
 
-# package_install(package, [system])
+# package_install(package, [system], [check-all])
 # Install some package, either from an update system or from Virtualmin. Returns
 # a list of updated package names.
 sub package_install
 {
-local ($name, $system) = @_;
+local ($name, $system, $all) = @_;
 local @rv;
 local ($pkg) = grep { $_->{'update'} eq $name &&
 		      ($_->{'system'} eq $system || !$system) }
-		    &list_available();
+		    &list_available(0, $all);
 if (!$pkg) {
 	print &text('update_efindpkg', $name),"<p>\n";
 	return ( );
@@ -690,6 +711,7 @@ else {
 	}
 # Flush installed cache
 unlink($current_cache_file);
+unlink($current_all_cache_file);
 return @rv;
 }
 
@@ -817,7 +839,7 @@ if (!$pkg->{'version'} && $gconfig{'os_type'} eq 'solaris') {
 	$pinfo[4] =~ s/,REV=.*//i;
 	$pkg->{'version'} = $pinfo[4];
 	}
-$pkg->{'desc'} =~ s/^$pkg->{'update'}\s+\-\s+//;
+$pkg->{'desc'} =~ s/^\Q$pkg->{'update'}\E\s+\-\s+//;
 }
 
 # include_webmin_modules()
@@ -963,11 +985,11 @@ sub installation_candiate
 {
 local ($p) = @_;
 if (!defined($webmin_install_type_cache)) {
-	$webmin_install_type_cache = &webmin::get_install_type();
+	$webmin_install_type_cache = &webmin::get_install_type() || "";
 	}
 if (!defined($usermin_install_type_cache)) {
 	&foreign_require("usermin", "usermin-lib.pl");
-	$usermin_install_type_cache = &usermin::get_install_type();
+	$usermin_install_type_cache = &usermin::get_install_type() || "";
 	}
 return # RPM packages from YUM
        $p->{'system'} eq 'yum' &&
@@ -1096,6 +1118,23 @@ if ($installed && $candidate) {
 	return 1;
 	}
 return 0;
+}
+
+# Returns 1 if an option should be shown to list all packages. Only true for
+# YUM and APT at the moment
+sub show_all_option
+{
+return $software::update_system eq 'apt' || $software::update_system eq 'yum';
+}
+
+sub flush_package_caches
+{
+unlink($current_cache_file);
+unlink($current_all_cache_file);
+unlink($updates_cache_file);
+unlink($available_cache_file);
+unlink($available_cache_file.'0');
+unlink($available_cache_file.'1');
 }
 
 1;

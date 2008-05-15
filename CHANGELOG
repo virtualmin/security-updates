@@ -1,0 +1,2 @@
+---- Changes since 2.8 ----
+On systems using YUM or APT, all packages available for update can be displayed, rather than just those related to Virtualmin.

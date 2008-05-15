@@ -16,32 +16,55 @@ if ($err) {
 
 # Show mode selector (all, updates only, updates and new)
 $in{'mode'} ||= 'both';
+$in{'all'} = 0 if (!defined($in{'all'}));
+@grid = ( );
 foreach $m ('all', 'updates', 'new', 'both') {
 	$mmsg = $text{'index_mode_'.$m};
 	if ($in{'mode'} eq $m) {
 		push(@mlinks, "<b>$mmsg</b>");
 		}
 	else {
-		push(@mlinks, "<a href='index.cgi?mode=$m'>$mmsg</a>");
+		push(@mlinks, "<a href='index.cgi?mode=$m&all=".
+			      &urlize($in{'all'})."'>$mmsg</a>");
 		}
 	}
-print $text{'index_mode'}," ",&ui_links_row(\@mlinks),"<p>\n";
+push(@grid, $text{'index_mode'}, &ui_links_row(\@mlinks));
+
+# Show all selector
+if (&show_all_option()) {
+	foreach $a (0, 1) {
+		$amsg = $text{'index_all_'.$a};
+		if ($in{'all'} eq $a) {
+			push(@alinks, "<b>$amsg</b>");
+			}
+		else {
+			push(@alinks, "<a href='index.cgi?mode=".
+				&urlize($in{'mode'})."&all=$a'>$amsg</a>");
+			}
+		}
+	push(@grid, $text{'index_allsel'}, &ui_links_row(\@alinks));
+	}
+print &ui_grid_table(\@grid, 2);
 
 # Work out what packages to show
 @updates = &list_security_updates();
-@current = &list_current(1);
-@avail = &list_available();
+@current = $in{'all'} ? &list_all_current(1) : &list_current(1);
+@avail = &list_available(0, $in{'all'});
 $sft = &foreign_available("software");
+
+# Make lookup hashes
+%current = map { $_->{'name'}."/".$_->{'system'}, $_ } @current;
+%avail = map { $_->{'name'}."/".$_->{'system'}, $_ } @avail;
+%updates = map { $_->{'name'}."/".$_->{'system'}, $_ } @updates;
+
+# Build table
 foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 	next if ($done{$p->{'name'},$p->{'system'}}++);	# May be in both lists
 
 	# Work out the status
-	($c) = grep { $_->{'name'} eq $p->{'name'} &&
-		      $_->{'system'} eq $p->{'system'} } @current;
-	($a) = grep { $_->{'name'} eq $p->{'name'} &&
-		      $_->{'system'} eq $p->{'system'} } @avail;
-	($u) = grep { $_->{'name'} eq $p->{'name'} &&
-		      $_->{'system'} eq $p->{'system'} } @updates;
+	$c = $current{$p->{'name'}."/".$p->{'system'}};
+	$a = $avail{$p->{'name'}."/".$p->{'system'}};
+	$u = $updates{$p->{'name'}."/".$p->{'system'}};
 	if ($u && $c && &compare_versions($u, $c) > 0) {
 		# A security problem was detected
 		if (&compare_versions($a, $u) >= 0) {
@@ -107,6 +130,8 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 # Show the packages, if any
 if (@rows) {
 	print &ui_form_start("update.cgi");
+	print &ui_hidden("mode", $in{'mode'});
+	print &ui_hidden("all", $in{'all'});
 	@tds = ( "width=5" );
 	@links = ( &select_all_link("u"), &select_invert_link("u") );
 	print &ui_links_row(\@links);

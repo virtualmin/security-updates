@@ -3,18 +3,17 @@
 
 require './security-updates-lib.pl';
 &ReadParse();
+$redir = "index.cgi?mode=".&urlize($in{'mode'})."&all=".&urlize($in{'all'});
 
 if ($in{'refresh'}) {
 	# Clear all caches
-	unlink($current_cache_file);
-	unlink($updates_cache_file);
-	unlink($available_cache_file);
+	&flush_package_caches();
 
 	# Clean YUM or APT cache, and re-fetch
 	&clear_repository_cache();
 	&list_available();
 
-	&redirect("");
+	&redirect($redir);
 	}
 else {
 	# Upgrade some packages
@@ -26,7 +25,7 @@ else {
 		($p, $s) = split(/\//, $ps);
 		print &text('update_pkg', "<tt>$p</tt>"),"<br>\n";
 		print "<ul>\n";
-		push(@got, &package_install($p, $s));
+		push(@got, &package_install($p, $s, $in{'all'}));
 		print "</ul><br>\n";
 		}
 	if (@got) {
@@ -46,5 +45,5 @@ else {
 
 	&webmin_log("update", "packages", scalar(@got),
 		    { 'got' => \@got });
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($redir, $text{'index_return'});
 	}
