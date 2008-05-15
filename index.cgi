@@ -118,8 +118,7 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		$need = 0;
 		next if ($in{'mode'} ne 'all');
 		}
-	$source = !$in{'all'} ? undef :
-		  $a->{'source'} =~ /^virtualmin/ ? "Virtualmin" :
+	$source = $a->{'source'} =~ /^virtualmin/ ? "Virtualmin" :
 		  $a->{'source'};
 	push(@rows, [ [
 		$c && $sft && $c->{'system'} ne 'webmin' &&
