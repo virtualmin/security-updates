@@ -2,6 +2,7 @@ index_title=Virtualmin Package Updates
 index_name=Package
 index_desc=Description
 index_status=Status
+index_source=Source
 index_bad2=Update to version $1 not yet available : $1
 index_bad=Update to version $1 advised : $2
 index_new=New version $1

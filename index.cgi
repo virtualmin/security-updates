@@ -58,6 +58,7 @@ $sft = &foreign_available("software");
 %updates = map { $_->{'name'}."/".$_->{'system'}, $_ } @updates;
 
 # Build table
+$anysource = 0;
 foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 	next if ($done{$p->{'name'},$p->{'system'}}++);	# May be in both lists
 
@@ -117,14 +118,19 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		$need = 0;
 		next if ($in{'mode'} ne 'all');
 		}
+	$source = !$in{'all'} ? undef :
+		  $a->{'source'} =~ /^virtualmin/ ? "Virtualmin" :
+		  $a->{'source'};
 	push(@rows, [ [
 		$c && $sft && $c->{'system'} ne 'webmin' &&
 		 $c->{'system'} ne 'tgz' ?
 		  "<a href='../software/edit_pack.cgi?package=".
 		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $p->{'name'},
 		$p->{'desc'},
-		$msg ],
+		$msg,
+		$source ? ( $source ) : ( ) ],
 		\@tds, "u", $p->{'update'}."/".$p->{'system'}, $need ]);
+	$anysource++ if ($source);
 	}
 
 # Show the packages, if any
@@ -137,7 +143,9 @@ if (@rows) {
 	print &ui_links_row(\@links);
 	print &ui_columns_start([ "", $text{'index_name'},
 				  $text{'index_desc'},
-				  $text{'index_status'} ], \@tds);
+				  $text{'index_status'},
+				  $anysource ? ( $text{'index_source'} ) : ( ),
+				], \@tds);
 	foreach $r (@rows) {
 		print &ui_checked_columns_row(@$r);
 		}
