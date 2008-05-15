@@ -128,7 +128,7 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $p->{'name'},
 		$p->{'desc'},
 		$msg,
-		$source ? ( $source ) : ( ) ],
+		$source ? ( $source ) : $anysource ? ( "") : ( ) ],
 		\@tds, "u", $p->{'update'}."/".$p->{'system'}, $need ]);
 	$anysource++ if ($source);
 	}

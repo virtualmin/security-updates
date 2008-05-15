@@ -419,6 +419,12 @@ if (defined(&software::update_system_available)) {
 	foreach my $p (@rv) {
 		$p->{'system'} = $software::update_system;
 		$p->{'version'} =~ s/,REV=.*//i;		# For CSW
+		if ($p->{'system'} eq 'apt' && !$p->{'source'}) {
+			$p->{'source'} =
+			    $p->{'file'} =~ /virtualmin/i ? 'virtualmin' : 
+			    $p->{'file'} =~ /debian/i ? 'debian' :
+			    $p->{'file'} =~ /ubuntu/i ? 'ubuntu' : undef;
+			}
 		$done{$p->{'name'}} = $p;
 		}
 	if ($software::update_system eq "yum" &&
