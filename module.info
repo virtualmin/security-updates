@@ -3,3 +3,4 @@ category=system
 depends=software cron mailboxes 1.221
 os_support=redhat-linux debian-linux mandrake-linux/10.2-* solaris freebsd
 version=2.8
+desc_nl=Virtualmin Pakketten Update
