@@ -1,0 +1,11 @@
+index_action=Actie indien update nodig is
+index_action0=Alleen laten zien
+index_action1=Installeer beveiligings updates
+index_action2=Installeer alle updates
+index_bad=Update naar versie $1 geadviseerd is : $2
+index_bad2=Update naar versie $1 is nog niet beschikbaar : $1
+index_caninstall=Beschikbaar voor installatie
+index_desc=Omschrijving
+index_eauth=Uw Virtualmin licencie is niet geldig
+index_email=Email update rapport naar
+index_err=Mislukt om pakket lijst te verkrijgen
