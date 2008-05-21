@@ -44,7 +44,7 @@ if (&show_all_option()) {
 		}
 	push(@grid, $text{'index_allsel'}, &ui_links_row(\@alinks));
 	}
-print &ui_grid_table(\@grid, 2);
+print &ui_grid_table(\@grid, 2),"<p>\n";
 
 # Work out what packages to show
 @updates = &list_security_updates();
