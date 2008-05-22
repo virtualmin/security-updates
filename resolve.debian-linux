@@ -9,3 +9,4 @@ php5		php5 php5-cgi libapache2-mod-php5
 apache		apache2
 fcgid		libapache2-mod-fcgid
 virtualmin-modules	webmin-.* usermin-.*
+clamav		clamav clamav-.*
