@@ -120,44 +120,40 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		}
 	$source = $a->{'source'} =~ /^virtualmin/ ? "Virtualmin" :
 		  $a->{'source'};
-	push(@rows, [ [
+	push(@rows, [
+		{ 'type' => 'checkbox', 'name' => 'u',
+		  'value' => $p->{'update'}."/".$p->{'system'},
+		  'checked' => $need },
 		$c && $sft && $c->{'system'} ne 'webmin' &&
 		 $c->{'system'} ne 'tgz' ?
 		  "<a href='../software/edit_pack.cgi?package=".
 		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $p->{'name'},
 		$p->{'desc'},
 		$msg,
-		$source ? ( $source ) : $anysource ? ( "") : ( ) ],
-		\@tds, "u", $p->{'update'}."/".$p->{'system'}, $need ]);
+		$source ? ( $source ) : $anysource ? ( "") : ( ),
+		]);
 	$anysource++ if ($source);
 	}
 
 # Show the packages, if any
-if (@rows) {
-	print &ui_form_start("update.cgi");
-	print &ui_hidden("mode", $in{'mode'});
-	print &ui_hidden("all", $in{'all'});
-	@tds = ( "width=5" );
-	@links = ( &select_all_link("u"), &select_invert_link("u") );
-	print &ui_links_row(\@links);
-	print &ui_columns_start([ "", $text{'index_name'},
-				  $text{'index_desc'},
-				  $text{'index_status'},
-				  $anysource ? ( $text{'index_source'} ) : ( ),
-				], \@tds);
-	foreach $r (@rows) {
-		print &ui_checked_columns_row(@$r);
-		}
-	print &ui_columns_end();
-	print &ui_links_row(\@links);
-	print &ui_form_end([ [ "ok", $in{'mode'} eq 'new' ?
-				$text{'index_install'} :$text{'index_update'} ],
-			     undef,
-			     [ "refresh", $text{'index_refresh'} ] ]);
-	}
-else {
-	print "<b>",$text{'index_none_'.$in{'mode'}},"</b><p>\n";
-	}
+print &ui_form_columns_table(
+	"update.cgi",
+	[ [ "ok", $in{'mode'} eq 'new' ? $text{'index_install'}
+				       : $text{'index_update'} ],
+	  undef,
+          [ "refresh", $text{'index_refresh'} ] ],
+	1,
+	undef,
+	[ [ "mode", $in{'mode'} ], [ "all", $in{'all'} ] ],
+	[ "", $text{'index_name'}, $text{'index_desc'}, $text{'index_status'},
+	  $anysource ? ( $text{'index_source'} ) : ( ), ],
+	100,
+	\@rows,
+	undef,
+	0,
+	undef,
+	$text{'index_none_'.$in{'mode'}}
+	);
 
 # Show scheduled report form
 print "<hr>\n";
