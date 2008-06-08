@@ -10,3 +10,4 @@ apache		apache2
 fcgid		libapache2-mod-fcgid
 virtualmin-modules	webmin-.* usermin-.*
 clamav		clamav clamav-.*
+dovecot		dovecot.*
