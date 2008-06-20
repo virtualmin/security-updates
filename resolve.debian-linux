@@ -1,7 +1,7 @@
 postfix		postfix postfix-tls
 bind		bind9 bind9-doc
 spamassassin	spamassassin spamc
-postgresql	postgresql postgresql-client libpg-perl libdbd-pg-perl
+postgresql	postgresql postgresql-.* libpg-perl libdbd-pg-perl
 mysql		mysql mysql-server.* mysql-client.* mysql-admin-common mysql-common libdbd-mysql-perl
 openssl		openssl libnet-ssleay-perl
 php4		php4 php4-cgi libapache2-mod-php4

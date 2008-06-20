@@ -32,6 +32,7 @@ push(@grid, $text{'index_mode'}, &ui_links_row(\@mlinks));
 
 # Show all selector
 if (&show_all_option()) {
+	$in{'all'} ||= 0;
 	foreach $a (0, 1) {
 		$amsg = $text{'index_all_'.$a};
 		if ($in{'all'} eq $a) {
