@@ -2,5 +2,5 @@ desc=Virtualmin Package Updates
 category=system
 depends=software cron mailboxes 1.420
 os_support=redhat-linux debian-linux mandrake-linux/10.2-* solaris freebsd
-version=3.0
+version=3.1
 desc_nl=Virtualmin Pakketten Update
