@@ -6,14 +6,21 @@ require './security-updates-lib.pl';
 $redir = "index.cgi?mode=".&urlize($in{'mode'})."&all=".&urlize($in{'all'});
 
 if ($in{'refresh'}) {
+	&ui_print_unbuffered_header(undef, $text{'refresh_title'}, "");
+
 	# Clear all caches
+	print $text{'refresh_clearing'},"<br>\n";
 	&flush_package_caches();
-
-	# Clean YUM or APT cache, and re-fetch
 	&clear_repository_cache();
-	&list_available();
+	print $text{'refresh_done'},"<p>\n";
 
-	&redirect($redir);
+	# Force re-fetch
+	print $text{'refresh_available'},"<br>\n";
+	@avail = &list_available();
+	print &text('refresh_done2', scalar(@avail)),"<p>\n";
+
+	&webmin_log("refresh");
+	&ui_print_footer($redir, $text{'index_return'});
 	}
 else {
 	# Upgrade some packages

@@ -14,6 +14,9 @@ if ($action eq 'update') {
 elsif ($action eq 'sched') {
 	return $text{$object ? 'log_sched' : 'log_unsched'};
 	}
+elsif ($action eq 'refresh') {
+	return $text{'log_refresh'};
+	}
 else {
 	return undef;
 	}
