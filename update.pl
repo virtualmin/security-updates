@@ -43,6 +43,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	}
 
 # Install packages that are needed
+$tellcount = 0;
 foreach $t (@todo) {
 	if ($t->{'level'} <= $config{'sched_action'}) {
 		# Can install
@@ -59,7 +60,17 @@ foreach $t (@todo) {
 	else {
 		# Just tell the user about it
 		$body .= "An update to $t->{'name'} $t->{'version'} is available : $t->{'desc'}\n\n";
+		$tellcount++;
 		}
+	}
+
+if ($tellcount) {
+	# Add link to Webmin
+	&get_miniserv_config(\%miniserv);
+	$proto = $miniserv{'ssl'} ? 'https' : 'http';
+	$port = $miniserv{'port'};
+	$url = $proto."://".&get_system_hostname().":".$port."/$module_name/";
+	$body .= "Updates can be installed at $url\n\n";
 	}
 
 # Email the admin
