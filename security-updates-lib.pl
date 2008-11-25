@@ -1108,7 +1108,6 @@ sub set_pinned_version
 {
 local ($pkg) = @_;
 return 0 if ($pkg->{'system'} ne 'apt');
-return 0 if (!-r "/etc/apt/preferences");	# No pinning configured
 local $qp = quotemeta($pkg->{'name'});
 local $out = &backquote_command("apt-cache policy $qp 2>/dev/null");
 local $installed = $out =~ /Installed:\s+(\S+)/ ? $1 : undef;
