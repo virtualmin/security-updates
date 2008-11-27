@@ -1109,7 +1109,7 @@ sub set_pinned_version
 local ($pkg) = @_;
 return 0 if ($pkg->{'system'} ne 'apt');
 local $qp = quotemeta($pkg->{'name'});
-local $out = &backquote_command("apt-cache policy $qp 2>/dev/null");
+local $out = &backquote_command("LANG='' LC_ALL='' apt-cache policy $qp 2>/dev/null");
 local $installed = $out =~ /Installed:\s+(\S+)/ ? $1 : undef;
 local $candidate = $out =~ /Candidate:\s+(\S+)/ ? $1 : undef;
 $candidate = "" if ($candidate eq "(none)");
