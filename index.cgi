@@ -128,7 +128,8 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		$c && $sft && $c->{'system'} ne 'webmin' &&
 		 $c->{'system'} ne 'tgz' ?
 		  "<a href='../software/edit_pack.cgi?package=".
-		  &urlize($c->{'name'})."'>$c->{'name'}</a>" : $p->{'name'},
+		  &urlize($c->{'name'})."&version=".
+		  &urlize($c->{'version'})."'>$c->{'name'}</a>" : $p->{'name'},
 		$p->{'desc'},
 		$msg,
 		$source ? ( $source ) : $anysource ? ( "") : ( ),

@@ -143,10 +143,7 @@ if ($nocache || &cache_expired($current_cache_file)) {
 		}
 
 	# Filter out dupes and sort by name
-	@rv = sort { $a->{'name'} cmp $b->{'name'} ||
-		     &compare_versions($b, $a) } @rv;
-	local %done;
-	@rv = grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
+	@rv = &filter_duplicates(\@rv);
 
 	local $incwebmin = &include_webmin_modules();
 	if ($incwebmin) {
@@ -246,6 +243,10 @@ if ($nocache || &cache_expired($current_all_cache_file)) {
 			});
 		&fix_pkgadd_version($rv[$#rv]);
 		}
+
+	# Filter out dupes and sort by name
+	@rv = &filter_duplicates(\@rv);
+
 	&write_cache_file($current_all_cache_file, \@rv);
 	return @rv;
 	}
@@ -296,6 +297,9 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 			}
 		}
 
+	# Filter out dupes and sort by name
+	@rv = &filter_duplicates(\@rv);
+
 	if (!$all && &include_webmin_modules()) {
 		# Get from Webmin updates services. We exclude Webmin and
 		# Usermin for now, as they cannot be updated via YUM.
@@ -314,6 +318,18 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 else {
 	return &read_cache_file($available_cache_file.int($all));
 	}
+}
+
+# filter_duplicates(&packages)
+# Given a list of package structures, orders them by name and version number,
+# and removes dupes with the same name
+sub filter_duplicates
+{
+local ($pkgs) = @_;
+local @rv = sort { $a->{'name'} cmp $b->{'name'} ||
+	         &compare_versions($b, $a) } @$pkgs;
+local %done;
+return grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
 }
 
 sub cache_expired
