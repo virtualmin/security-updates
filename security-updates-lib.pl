@@ -539,8 +539,8 @@ if ($pkg->{'system'} eq 'webmin') {
 		}
 	else {
 		print $text{'update_winstalled'},"<p>\n";
+		@rv = map { /([^\/]+)$/; $1 } @{$irv->[1]};
 		}
-	@rv = map { /([^\/]+)$/; $1 } @{$irv->[1]};
 	}
 elsif ($pkg->{'system'} eq 'tgz') {
 	# Tar file of Webmin or Usermin, which we have to download and
