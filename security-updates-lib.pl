@@ -780,6 +780,7 @@ local @rv;
 local @updates = &list_security_updates($nocache == 1);
 local @current = &list_current($nocache);
 local @avail = &list_available($nocache == 1);
+@avail = sort { &compare_versions($b, $a) } @avail;
 local ($a, $c, $u);
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
