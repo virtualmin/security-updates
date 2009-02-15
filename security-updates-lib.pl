@@ -507,7 +507,8 @@ local ($name, $system, $all) = @_;
 local @rv;
 local ($pkg) = grep { $_->{'update'} eq $name &&
 		      ($_->{'system'} eq $system || !$system) }
-		    &list_available(0, $all);
+		    sort { &compare_versions($b, $a) }
+		         &list_available(0, $all);
 if (!$pkg) {
 	print &text('update_efindpkg', $name),"<p>\n";
 	return ( );
