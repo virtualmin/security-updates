@@ -1126,12 +1126,14 @@ sub set_pinned_version
 {
 local ($pkg) = @_;
 return 0 if ($pkg->{'system'} ne 'apt');
+local $rv = 0;
 local $qp = quotemeta($pkg->{'name'});
 local $out = &backquote_command("LANG='' LC_ALL='' apt-cache policy $qp 2>/dev/null");
 local $installed = $out =~ /Installed:\s+(\S+)/ ? $1 : undef;
 local $candidate = $out =~ /Candidate:\s+(\S+)/ ? $1 : undef;
 $candidate = "" if ($candidate eq "(none)");
 if ($installed && $candidate) {
+	# An installation candidate is defined .. use it
 	local $cepoch;
 	if ($candidate =~ s/^(\d+)://) {
 		$cepoch = $1;
@@ -1140,9 +1142,51 @@ if ($installed && $candidate) {
 		$pkg->{'version'} = $candidate;
 		$pkg->{'epoch'} = $cepoch;
 		}
-	return 1;
+	$rv = 1;
 	}
-return 0;
+print STDERR "name=$pkg->{'name'} installed=$installed candidate=$candidate\n";
+if ($installed && $candidate &&
+    $gconfig{'os_type'} eq 'debian-linux' && $gconfig{'os_version'} eq '4.0') {
+	# Don't offer to upgrade to Lenny packages .. first work out which
+	# versions apt-get knows about.
+	local @lines = split(/\r?\n/, $out);
+	local $found_versions;
+	local @versions;
+	for(my $i=0; $i<@lines; $i++) {
+		if ($lines[$i] =~ /\s*Version\s+table:/i) {
+			$found_versions = 1;
+			next;
+			}
+		next if (!$found_versions);
+		if ($lines[$i] =~ /^[ \*]+(\S+)/) {
+			# Found a version number
+			local $ver = $1;
+			$i++;
+			if ($lines[$i] =~ /^\s+(\d+)\s+(\S.*)$/) {
+				push(@versions, { 'ver' => $ver,
+						  'pri' => $1,
+						  'url' => $2 });
+				print STDERR "  ver=$ver url=$2\n";
+				}
+			}
+		}
+	# If the latest version is from stable, don't use it
+	local ($nv) = grep { $_->{'ver'} eq $pkg->{'version'} ||
+			     $_->{'ver'} eq $candidate } @versions;
+	print STDERR "   nv=$nv\n";
+	if ($nv && $nv->{'url'} =~ /stable/ && $nv->{'url'} !~ /virtualmin/) {
+		shift(@versions);
+		local $safever = @versions ? $versions[0]->{'ver'}
+					   : $installed;
+		local $sepoch;
+		if ($safever =~ s/^(\d+)://) {
+			$sepoch = $1;
+			}
+		$pkg->{'version'} = $safever;
+		$pkg->{'epoch'} = $sepoch;
+		}
+	}
+return $rv;
 }
 
 # Returns 1 if an option should be shown to list all packages. Only true for
