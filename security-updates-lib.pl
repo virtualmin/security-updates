@@ -1144,7 +1144,6 @@ if ($installed && $candidate) {
 		}
 	$rv = 1;
 	}
-print STDERR "name=$pkg->{'name'} installed=$installed candidate=$candidate\n";
 if ($installed && $candidate &&
     $gconfig{'os_type'} eq 'debian-linux' && $gconfig{'os_version'} eq '4.0') {
 	# Don't offer to upgrade to Lenny packages .. first work out which
@@ -1163,20 +1162,20 @@ if ($installed && $candidate &&
 			local $ver = $1;
 			$i++;
 			if ($lines[$i] =~ /^\s+(\d+)\s+(\S.*)$/) {
-				push(@versions, { 'ver' => $ver,
+				push(@versions, { 'version' => $ver,
 						  'pri' => $1,
 						  'url' => $2 });
-				print STDERR "  ver=$ver url=$2\n";
 				}
 			}
 		}
 	# If the latest version is from stable, don't use it
-	local ($nv) = grep { $_->{'ver'} eq $pkg->{'version'} ||
-			     $_->{'ver'} eq $candidate } @versions;
-	print STDERR "   nv=$nv\n";
+	@versions = sort { &compare_versions($b, $a) } @versions;
+	local ($nv) = grep { $_->{'version'} eq $pkg->{'version'} ||
+			     $_->{'version'} eq $pkg->{'epoch'}.':'.
+					     $pkg->{'version'} } @versions;
 	if ($nv && $nv->{'url'} =~ /stable/ && $nv->{'url'} !~ /virtualmin/) {
 		shift(@versions);
-		local $safever = @versions ? $versions[0]->{'ver'}
+		local $safever = @versions ? $versions[0]->{'version'}
 					   : $installed;
 		local $sepoch;
 		if ($safever =~ s/^(\d+)://) {
