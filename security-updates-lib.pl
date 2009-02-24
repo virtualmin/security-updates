@@ -642,7 +642,7 @@ elsif (defined(&software::update_system_install)) {
 	&clean_environment();
 	if ($software::update_system eq $pkg->{'system'}) {
 		# Can use the default system
-		@rv = &software::update_system_install($name);
+		@rv = &software::update_system_install($name, undef, 1);
 		}
 	else {
 		# Another update system exists!! Use it..
@@ -652,7 +652,7 @@ elsif (defined(&software::update_system_install)) {
 		if (!$done_rhn_text++) {
 			%text = ( %text, %software::text );
 			}
-		@rv = &update_system_install($name);
+		@rv = &update_system_install($name, undef, 1);
 		}
 	&reset_environment();
 	}
