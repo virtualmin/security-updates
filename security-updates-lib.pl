@@ -1,8 +1,12 @@
 # Functions for checking for security updates of core Virtualmin packages
 
-do '../web-lib.pl';
+BEGIN { push(@INC, ".."); };
+eval "use WebminCore;";
+if ($@) {
+	do '../web-lib.pl';
+	do '../ui-lib.pl';
+	}
 &init_config();
-do '../ui-lib.pl';
 &foreign_require("software", "software-lib.pl");
 &foreign_require("cron", "cron-lib.pl");
 &foreign_require("webmin", "webmin-lib.pl");
