@@ -16,7 +16,8 @@ if ($@) {
 		     "postgresql", "proftpd", "clamav", "php4", "mailman",
 		     "subversion", "python", "ruby", "irb", "rdoc", "rubygems",
 		     "openssl", "perl", "php5", "webmin", "usermin",
-		     "fcgid", "awstats", "dovecot", "virtualmin-modules",
+		     "fcgid", "awstats", "dovecot", "postgrey",
+		     "virtualmin-modules",
 		   ); 
 
 $security_cache_file = "$module_config_directory/security.cache";
