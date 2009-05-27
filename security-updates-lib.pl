@@ -863,10 +863,17 @@ return $pn;
 sub fix_pkgadd_version
 {
 local ($pkg) = @_;
-if (!$pkg->{'version'} && $gconfig{'os_type'} eq 'solaris') {
-	local @pinfo = &software::package_info($pkg->{'name'});
-	$pinfo[4] =~ s/,REV=.*//i;
-	$pkg->{'version'} = $pinfo[4];
+if ($gconfig{'os_type'} eq 'solaris') {
+	if (!$pkg->{'version'}) {
+		# Make an extra call to get the version
+		local @pinfo = &software::package_info($pkg->{'name'});
+		$pinfo[4] =~ s/,REV=.*//i;
+		$pkg->{'version'} = $pinfo[4];
+		}
+	elsif {
+		# Trip off the REV=
+		$pkg->{'version'} =~ s/,REV=.*//i;
+		}
 	}
 $pkg->{'desc'} =~ s/^\Q$pkg->{'update'}\E\s+\-\s+//;
 }
