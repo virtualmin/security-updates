@@ -870,7 +870,7 @@ if ($gconfig{'os_type'} eq 'solaris') {
 		$pinfo[4] =~ s/,REV=.*//i;
 		$pkg->{'version'} = $pinfo[4];
 		}
-	elsif {
+	else {
 		# Trip off the REV=
 		$pkg->{'version'} =~ s/,REV=.*//i;
 		}
