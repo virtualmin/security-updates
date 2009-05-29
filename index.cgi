@@ -48,7 +48,6 @@ if (&show_all_option()) {
 print &ui_grid_table(\@grid, 2),"<p>\n";
 
 # Work out what packages to show
-@updates = &list_security_updates();
 @current = $in{'all'} ? &list_all_current(1) : &list_current(1);
 @avail = &list_available(0, $in{'all'});
 $sft = &foreign_available("software");
@@ -56,7 +55,6 @@ $sft = &foreign_available("software");
 # Make lookup hashes
 %current = map { $_->{'name'}."/".$_->{'system'}, $_ } @current;
 %avail = map { $_->{'name'}."/".$_->{'system'}, $_ } @avail;
-%updates = map { $_->{'name'}."/".$_->{'system'}, $_ } @updates;
 
 # Build table
 $anysource = 0;
@@ -66,27 +64,7 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 	# Work out the status
 	$c = $current{$p->{'name'}."/".$p->{'system'}};
 	$a = $avail{$p->{'name'}."/".$p->{'system'}};
-	$u = $updates{$p->{'name'}."/".$p->{'system'}};
-	if ($u && $c && &compare_versions($u, $c) > 0) {
-		# A security problem was detected
-		if (&compare_versions($a, $u) >= 0) {
-			# And an update is available
-			$msg = "<font color=#aa0000>".
-			       &text('index_bad', $u->{'version'},
-				     $u->{'desc'})."</font>";
-			$need = 1;
-			}
-		else {
-			# Not available!
-			$msg = "<b><font color=#aa0000>".
-			       &text('index_bad2', $u->{'version'},
-				     $u->{'desc'})."</font></b>";
-			$need = 0;
-			}
-		next if ($in{'mode'} ne 'both' && $in{'mode'} ne 'updates' &&
-			 $in{'mode'} ne 'all');
-		}
-	elsif ($a && $c && &compare_versions($a, $c) > 0) {
+	if ($a && $c && &compare_versions($a, $c) > 0) {
 		# An update is available
 		$msg = "<b><font color=#00aa00>".
 		       &text('index_new', $a->{'version'})."</font></b>";

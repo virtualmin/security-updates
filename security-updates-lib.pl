@@ -1,4 +1,4 @@
-# Functions for checking for security updates of core Virtualmin packages
+# Functions for checking for updates to core Virtualmin packages
 
 BEGIN { push(@INC, ".."); };
 eval "use WebminCore;";
@@ -20,18 +20,14 @@ if ($@) {
 		     "virtualmin-modules",
 		   ); 
 
-$security_cache_file = "$module_config_directory/security.cache";
 $available_cache_file = "$module_config_directory/available.cache";
 $current_cache_file = "$module_config_directory/current.cache";
 $current_all_cache_file = "$module_config_directory/current-all.cache";
 $cron_cmd = "$module_config_directory/update.pl";
 
 $virtualmin_host = $config{'host'} || "software.virtualmin.com";
-$server_manager_host = "vm2.virtualmin.com";
 $virtualmin_port = 80;
-$virtualmin_dir = "$config{'suffix'}/updates/$gconfig{'os_type'}";
-$virtualmin_list = "$virtualmin_dir/index.txt";
-$virtualmin_security = "$virtualmin_dir/security.txt";
+$server_manager_host = "vm2.virtualmin.com";
 $virtualmin_licence = "/etc/virtualmin-license";
 $server_manager_licence = "/etc/server-manager-license";
 $webmin_version_path = "$config{'suffix'}/wbm/webmin-version";
@@ -49,58 +45,7 @@ sub test_connection
 return undef if (&free_virtualmin_licence());	# GPL install
 local ($user, $pass, $host) = &get_user_pass();
 return $text{'index_euser'} if (!$user);
-local $error;
-&http_download($host, $virtualmin_port, $virtualmin_security,
-	       \$list, \$error, undef, 0, $user, $pass);
-if ($error =~ /authorization|authentication/i) {
-	return $text{'index_eauth'};
-	}
-elsif ($error) {
-	return $error;
-	}
-else {
-	return undef;
-	}
-}
-
-# list_security_updates()
-# Returns a list of packages, versions and problem descriptions from the
-# Virtualmin server. 
-sub list_security_updates
-{
-local ($nocache) = @_;
-if ($nocache || &cache_expired($security_cache_file)) {
-	local ($list, @rv, $error);
-	return ( ) if (&free_virtualmin_licence());	# GPL install
-	local ($user, $pass) = &get_user_pass();
-	&http_download($virtualmin_host, $virtualmin_port, $virtualmin_security,
-		       \$list, \$error, undef, 0, $user, $pass);
-	return ( ) if ($error);		# None for this OS
-	foreach my $l (split(/\r?\n/, $list)) {
-		next if ($l =~ /^#/);
-		local ($name, $version, $severity, $os, $desc) = split(/\s+/, $l, 5);
-		if ($name && $version) {
-			$os =~ s/;/ /g;
-			local %info = ( 'os_support' => $os );
-			if (&check_os_support(\%info)) {
-				local $epoch;
-				if ($version =~ s/^(\S+)://) {
-					$epoch = $1;
-					}
-				push(@rv, { 'name' => $name,
-					    'version' => $version,
-					    'epoch' => $epoch,
-					    'severity' => $severity,
-					    'desc' => $desc });
-				}
-			}
-		}
-	&write_cache_file($security_cache_file, \@rv);
-	return @rv;
-	}
-else {
-	return &read_cache_file($security_cache_file);
-	}
+return undef;
 }
 
 # list_current(nocache)
@@ -428,9 +373,9 @@ return $name;
 }
 
 # packages_available()
-# Returns a list of available packages, as hash references with name and
-# version keys. This may come from the update system (APT or YUM), or from
-# the Virtualmin servers.
+# Returns a list of all available packages, as hash references with name and
+# version keys. These come from the APT, YUM or CSW update system, if available.
+# If not, nothing is returned.
 sub packages_available
 {
 if (defined(&software::update_system_available)) {
@@ -476,31 +421,7 @@ if (defined(&software::update_system_available)) {
 		}
 	return @rv;
 	}
-else {
-	# From virtualmin's server
-	local ($list, @rv);
-	local ($user, $pass) = &get_user_pass();
-	&http_download($virtualmin_host, $virtualmin_port, $virtualmin_list,
-		       \$list, undef, undef, 0, $user, $pass);
-	foreach my $l (split(/\r?\n/, $list)) {
-		next if ($l =~ /^#/);
-		local ($name, $version, $file, $os, $deps, $desc) = split(/\s+/, $l, 6);
-		if ($name && $version) {
-			$os =~ s/;/ /g;
-			local %info = ( 'os_support' => $os );
-			if (&check_os_support(\%info)) {
-				push(@rv, { 'name' => $name,
-					    'version' => $version,
-					    'file' => $file,
-					    'depends' => $deps eq "none" ? [ ] :
-						[ split(/;/, $deps) ],
-					    'desc' => $desc,
-					    'system' => 'virtualmin', });
-				}
-			}
-		}
-	return @rv;
-	}
+return ( );
 }
 
 # package_install(package, [system], [check-all])
@@ -662,80 +583,7 @@ elsif (defined(&software::update_system_install)) {
 	&reset_environment();
 	}
 else {
-	# Need to download and install manually, and print out result.
-	local ($pkg) = grep { $_->{'name'} eq $name &&
-		      	      ($_->{'system'} eq $system || !$system) }
-			    &packages_available();
-	if (!$pkg) {
-		print &text('update_efound', $name),"<br>\n";
-		return ( );
-		}
-
-	# Recursively resolve any dependencies
-	local @current = &list_all_current(1);
-	foreach my $d (@{$pkg->{'depends'}}) {
-		local ($dname, $dver);
-		if ($d =~ /^(\S+)\-([^\-]+)\-([^\-])+$/) {
-			$dname = $1;
-			$dver = "$2-$3";
-			}
-		elsif ($d =~ /^(\S+)\-([^\-]+)$/) {
-			$dname = $1;
-			$dver = $2;
-			}
-		else {
-			$dname = $d;
-			}
-		local ($curr) = grep { $_->{'name'} eq $dname } @current;
-		if (!$curr ||
-		    &compare_versions($curr, { 'version' => $dver }) < 0) {
-			# We need this dependency!
-			print &text('update_depend', $dname, $dver),"<br>\n";
-			print "<ul>\n";
-			local @dgot = &package_install($dname);
-			print "</ul>\n";
-			if (@dgot) {
-				push(@rv, @dgot);
-				}
-			else {
-				# Could not find!
-				return ( );
-				}
-			}
-		}
-
-	# Fetch the package file
-	local ($phost, $pport, $ppage, $pssl) = &parse_http_url($pkg->{'file'}, $virtualmin_host, $virtualmin_port, $virtualmin_dir."/", 0);
-	local $pfile = $ppage;
-	$pfile =~ s/^(.*)\///;
-	local $temp = &tempname($pfile);
-	local $error;
-	$progress_callback_url = "http://$phost:$pport$ppage";
-	local ($user, $pass) = &get_user_pass();
-	&http_download($phost, $pport, $ppage, $temp, \$error,
-		       \&progress_callback, 0, $user, $pass);
-	if ($error) {
-		# Could not download
-		print &text('update_edownload', $pfile, $error),
-		      "<br>\n";
-		return ( );
-		}
-
-	# Install it
-	local %fakein = ( 'upgrade' => 1 );
-	local $err = &software::install_package($temp, $pkg->{'name'}, \%fakein);
-	if ($err) {
-		# Could not install
-		print &text('update_einstall', $err),"<br>\n";
-		return ( );
-		}
-	else {
-		local @info = &software::package_info($pkg->{'name'},
-						      $pkg->{'version'});
-		print &text('update_done', $info[0], $info[4], $info[2]),
-		      "<br>\n";
-		push(@rv, $info[0]);
-		}
+	&error("Don't know how to install package $pkg->{'name'} with type $pkg->{'type'}");
 	}
 # Flush installed cache
 unlink($current_cache_file);
@@ -783,7 +631,6 @@ sub list_possible_updates
 {
 local ($nocache) = @_;
 local @rv;
-local @updates = &list_security_updates($nocache == 1);
 local @current = &list_current($nocache);
 local @avail = &list_available($nocache == 1);
 @avail = sort { &compare_versions($b, $a) } @avail;
@@ -792,20 +639,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
 	($a) = grep { $_->{'name'} eq $c->{'name'} &&
 		      $_->{'system'} eq $c->{'system'} } @avail;
-	($u) = grep { $_->{'name'} eq $c->{'name'} &&
-		      $_->{'system'} eq $c->{'system'} } @updates;
-	if ($u && &compare_versions($u, $c) > 0 &&
-	    $a && &compare_versions($a, $u) >= 0) {
-		# Security update is available
-		push(@rv, { 'name' => $a->{'name'},
-			    'update' => $a->{'update'},
-			    'system' => $a->{'system'},
-			    'version' => $a->{'version'},
-			    'epoch' => $a->{'epoch'},
-			    'desc' => $u->{'desc'},
-			    'severity' => $u->{'severity'} });
-		}
-	elsif ($a->{'version'} && &compare_versions($a, $c) > 0) {
+	if ($a->{'version'} && &compare_versions($a, $c) > 0) {
 		# A regular update is available
 		push(@rv, { 'name' => $a->{'name'},
 			    'update' => $a->{'update'},
