@@ -31,9 +31,12 @@ $server_manager_host = "vm2.virtualmin.com";
 $virtualmin_licence = "/etc/virtualmin-license";
 $server_manager_licence = "/etc/server-manager-license";
 $webmin_version_path = "$config{'suffix'}/wbm/webmin-version";
+$free_webmin_version_path = "$config{'suffix'}/gpl/wbm/webmin-version";
 $usermin_version_path = "$config{'suffix'}/wbm/usermin-version";
+$free_usermin_version_path = "$config{'suffix'}/gpl/wbm/usermin-version";
 $webmin_download_path = "$config{'suffix'}/wbm/webmin-current.tar.gz";
-$usermin_download_path = "$config{'suffix'}/wbm/usermin-current.tar.gz";
+$free_webmin_download_path = "$config{'suffix'}/gpl/wbm/webmin-current.tar.gz";
+$free_usermin_download_path = "$config{'suffix'}/gpl/wbm/usermin-current.tar.gz";
 
 $yum_cache_file = "$module_config_directory/yumcache";
 $apt_cache_file = "$module_config_directory/aptcache";
@@ -477,8 +480,14 @@ elsif ($pkg->{'system'} eq 'tgz') {
 	local $error;
 	print &text('update_tgzdownload', ucfirst($pkg->{'name'})),"<br>\n";
 	local ($user, $pass) = &get_user_pass();
-	local $path = $pkg->{'name'} eq 'webmin' ? $webmin_download_path
-						 : $usermin_download_path;
+	local $free = free_virtualmin_licence();
+	local $path = $pkg->{'name'} eq 'webmin' && $free ?
+			$free_webmin_download_path :
+		      $pkg->{'name'} eq 'webmin' && !$free ?
+			$webmin_download_path :
+		      $pkg->{'name'} eq 'usermin' && $free ?
+			$free_usermin_download_path :
+			$usermin_download_path;
 	&http_download($virtualmin_host, $virtualmin_port, $path,
 		       $temp, \$error, undef, 0, $user, $pass);
 	if ($error || !-r $temp) {
@@ -816,9 +825,10 @@ foreach my $url (@urls) {
 # tar.gz install
 local $free = free_virtualmin_licence();
 local ($user, $pass) = &get_user_pass();
-if (!$free && &include_webmin_modules() == 1) {
+if (&include_webmin_modules() == 1) {
 	local ($wver, $error);
-	&http_download($virtualmin_host, $virtualmin_port, $webmin_version_path,
+	&http_download($virtualmin_host, $virtualmin_port,
+		       $free ? $free_webmin_version_path : $webmin_version_path,
 		       \$wver, \$error, undef, 0, $user, $pass);
 	$wver =~ s/\r|\n//g;
 	if (!$error) {
@@ -831,10 +841,11 @@ if (!$free && &include_webmin_modules() == 1) {
 	}
 
 # And Usermin
-if (!$free && &include_usermin_modules() == 1) {
+if (&include_usermin_modules() == 1) {
 	local ($uver, $error);
-	&http_download($virtualmin_host, $virtualmin_port,$usermin_version_path,
-		       \$uver, \$error, undef, 0, $user, $pass);
+	&http_download($virtualmin_host, $virtualmin_port,
+		     $free ? $free_usermin_version_path : $usermin_version_path,
+		     \$uver, \$error, undef, 0, $user, $pass);
 	$uver =~ s/\r|\n//g;
 	if (!$error) {
 		push(@rv, { 'name' => 'usermin',
