@@ -5,34 +5,12 @@ $no_acl_check++;
 require './security-updates-lib.pl';
 
 # See what needs doing
-@updates = &list_security_updates(1);
 @current = &list_current(1);
 @avail = &list_available(1);
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	($a) = grep { $_->{'name'} eq $c->{'name'} &&
 		      $_->{'system'} eq $c->{'system'} } @avail;
-	($u) = grep { $_->{'name'} eq $c->{'name'} &&
-		      $_->{'system'} eq $c->{'system'} } @updates;
-	if ($u && &compare_versions($u, $c) > 0) {
-		# A security problem was detected
-		if (&compare_versions($a, $u) >= 0) {
-			# And an update is available
-			push(@todo, { 'name' => $c->{'name'},
-				      'update' => $a->{'update'},
-				      'version' => $a->{'version'},
-				      'desc' => $u->{'desc'},
-				      'level' => 1 });
-			}
-		else {
-			# Not available
-			push(@todo, { 'name' => $c->{'name'},
-				      'update' => $a->{'update'},
-				      'version' => $a->{'version'},
-				      'desc' => $u->{'desc'},
-				      'level' => 0 });
-			}
-		}
-	elsif ($a->{'version'} && &compare_versions($a, $c) > 0) {
+	if ($a->{'version'} && &compare_versions($a, $c) > 0) {
 		# An update is available
 		push(@todo, { 'name' => $c->{'name'},
 			      'update' => $a->{'update'},
