@@ -16,7 +16,7 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 			      'update' => $a->{'update'},
 			      'version' => $a->{'version'},
 			      'desc' => "New version released",
-			      'level' => 2 });
+			      'level' => $a->{'security'} ? 1 : 2 });
 		}
 	}
 
