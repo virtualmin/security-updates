@@ -99,6 +99,9 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		}
 	$source = $a->{'source'} =~ /^virtualmin/ ? "Virtualmin" :
 		  $a->{'source'};
+	if ($a->{'security'}) {
+		$source = "<font color=#ff0000>$source</font>";
+		}
 	push(@rows, [
 		{ 'type' => 'checkbox', 'name' => 'u',
 		  'value' => $p->{'update'}."/".$p->{'system'},
