@@ -14,11 +14,16 @@ if ($err) {
 	exit;
 	}
 
-# Show mode selector (all, updates only, updates and new)
+# See if any security updates exist
 $in{'mode'} ||= 'both';
 $in{'all'} = 0 if (!defined($in{'all'}));
+@avail = &list_available(0, $in{'all'});
+($sec) = grep { $_->{'security'} } @avail;
+
+# Show mode selector (all, updates only, updates and new)
 @grid = ( );
-foreach $m ('all', 'updates', 'new', 'both') {
+foreach $m ('all', 'updates', 'new', 'both',
+	    $sec ? ( 'security' ) : ( )) {
 	$mmsg = $text{'index_mode_'.$m};
 	if ($in{'mode'} eq $m) {
 		push(@mlinks, "<b>$mmsg</b>");
@@ -49,7 +54,6 @@ print &ui_grid_table(\@grid, 2),"<p>\n";
 
 # Work out what packages to show
 @current = $in{'all'} ? &list_all_current(1) : &list_current(1);
-@avail = &list_available(0, $in{'all'});
 $sft = &foreign_available("software");
 
 # Make lookup hashes
@@ -64,13 +68,15 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 	# Work out the status
 	$c = $current{$p->{'name'}."/".$p->{'system'}};
 	$a = $avail{$p->{'name'}."/".$p->{'system'}};
+
 	if ($a && $c && &compare_versions($a, $c) > 0) {
 		# An update is available
 		$msg = "<b><font color=#00aa00>".
 		       &text('index_new', $a->{'version'})."</font></b>";
 		$need = 1;
+		next if ($in{'mode'} eq 'security' && !$a->{'security'});
 		next if ($in{'mode'} ne 'both' && $in{'mode'} ne 'updates' &&
-			 $in{'mode'} ne 'all');
+			 $in{'mode'} ne 'all' && $in{'mode'} ne 'security');
 		}
 	elsif ($a && !$c) {
 		# Could be installed, but isn't currently

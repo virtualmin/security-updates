@@ -1,2 +1,4 @@
 ---- Changes since 2.8 ----
 On systems using YUM or APT, all packages available for update can be displayed, rather than just those related to Virtualmin.
+---- Changes since 3.6 ----
+Security-critical updates are now shown in red on the main page, and a separate package state link is available to select them.
