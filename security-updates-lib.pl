@@ -90,6 +90,7 @@ if ($nocache || &cache_expired($current_cache_file)) {
 				    $software::packages{$i,'desc'},
 				  'package' => $p,
 				  'system' => $software::update_system,
+				  'software' => 1,
 				  });
 				&fix_pkgadd_version($rv[$#rv]);
 				}
@@ -1085,10 +1086,10 @@ if ($pkg->{'system'} eq 'yum') {
 		# Save the cache
 		if (!-d $yum_changelog_cache_dir) {
 			&make_dir($yum_changelog_cache_dir, 0700);
-			&open_tempfile(CACHE, ">$cfile");
-			&print_tempfile(CACHE, $cl);
-			&close_tempfile(CACHE);
 			}
+		&open_tempfile(CACHE, ">$cfile");
+		&print_tempfile(CACHE, $cl);
+		&close_tempfile(CACHE);
 		}
 	return $cl;
 	}

@@ -14,13 +14,19 @@ require './security-updates-lib.pl';
               $_->{'system'} eq $in{'system'} } @current;
 $p = $a || $c;
 
+print &ui_form_start("save_view.cgi");
+print &ui_hidden("name", $p->{'name'});
+print &ui_hidden("system", $p->{'system'});
+print &ui_hidden("version", $p->{'version'});
+print &ui_hidden("all", $in{'all'});
+print &ui_hidden("mode", $in{'mode'});
 print &ui_table_start($text{'view_header'}, undef, 2);
 
 # Package name and type
 print &ui_table_row($text{'view_name'}, $p->{'name'});
 print &ui_table_row($text{'view_system'}, $text{'system_'.$p->{'system'}} ||
 					  uc($p->{'system'}));
-print &ui_table_row($text{'view_desc'}, $p->{'desc'});
+print &ui_table_row($text{'view_desc'}, $c->{'desc'});
 
 # Current state
 print &ui_table_row($text{'view_state'},
@@ -55,5 +61,19 @@ if ($a) {
 
 print &ui_table_end();
 
-&ui_print_footer("", $text{'index_return'});
+# Buttons to update / manage
+@buts = ( );
+if ($c && &foreign_available("software") && $c->{'software'}) {
+	push(@buts, [ "software", $text{'view_software'} ]);
+	}
+if ($a && $c && &compare_versions($a, $c) > 0) {
+	push(@buts, [ "update", $text{'view_update'} ]);
+	}
+elsif ($a && !$c) {
+	push(@buts, [ "update", $text{'view_install'} ]);
+	}
+print &ui_form_end(\@buts);
+
+&ui_print_footer("index.cgi?all=$in{'all'}&mode=$in{'mode'}",
+		 $text{'index_return'});
 

@@ -54,7 +54,6 @@ print &ui_grid_table(\@grid, 2),"<p>\n";
 
 # Work out what packages to show
 @current = $in{'all'} ? &list_all_current(1) : &list_current(1);
-$sft = &foreign_available("software");
 
 # Make lookup hashes
 %current = map { $_->{'name'}."/".$_->{'system'}, $_ } @current;
@@ -112,7 +111,7 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		{ 'type' => 'checkbox', 'name' => 'u',
 		  'value' => $p->{'update'}."/".$p->{'system'},
 		  'checked' => $need },
-		"<a href='view.cgi?all=$in{'all'}&name=".
+		"<a href='view.cgi?all=$in{'all'}&mode=$in{'mode'}&name=".
 		  &urlize($c->{'name'})."&system=".
 		  &urlize($c->{'system'})."'>$c->{'name'}</a>",
 		$p->{'desc'},

@@ -97,6 +97,9 @@ view_cversion=Installed version
 view_aversion=Available version
 view_source=Installation source
 view_changelog=Changelog for available version
+view_software=Manage Package
+view_update=Update Package
+view_install=Install Package
 
 system_yum=YUM
 system_apt=APT
