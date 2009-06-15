@@ -40,6 +40,7 @@ $free_usermin_download_path = "$config{'suffix'}/gpl/wbm/usermin-current.tar.gz"
 
 $yum_cache_file = "$module_config_directory/yumcache";
 $apt_cache_file = "$module_config_directory/aptcache";
+$yum_changelog_cache_dir = "$module_config_directory/yumchangelog";
 
 # test_connection()
 # Returns undef if we can connect OK, or an error message
@@ -235,6 +236,7 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 						  &generate_description($avail);
 						}
 					&set_pinned_version($avail);
+					&set_changelog($avail);
 					push(@rv, $avail);
 					}
 				}
@@ -246,6 +248,7 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 			$avail->{'update'} = $avail->{'name'};
 			$avail->{'name'} = &csw_to_pkgadd($avail->{'name'});
 			&set_pinned_version($avail);
+			&set_changelog($avail);
 			push(@rv, $avail);
 			}
 		}
@@ -1043,6 +1046,55 @@ if ($installed && $candidate &&
 		}
 	}
 return $rv;
+}
+
+# get_changelog(&pacakge)
+# If possible, returns information about what has changed in some update
+sub get_changelog
+{
+local ($pkg) = @_;
+if ($pkg->{'system'} eq 'yum') {
+	# See if yum supports changelog
+	if (!defined($supports_yum_changelog)) {
+		local $out = &backquote_command("yum -h 2>&1 </dev/null");
+		$supports_yum_changelog = $out =~ /changelog/ ? 1 : 0;
+		}
+	return if (!$supports_yum_changelog);
+
+	# Check if we have this info cached
+	local $cfile = $yum_changelog_cache_dir."/".
+		       $pkg->{'name'}."-".$pkg->{'version'};
+	local $cl = &read_file_contents($cfile);
+	if (!$cl) {
+		# Run it for this package and version
+		local $started = 0;
+		&open_execute_command(YUMCL, "yum changelog all ".
+					     quotemeta($pkg->{'name'}), 1, 1);
+		while(<YUMCL>) {
+			s/\r|\n//g;
+			if (/^\Q$pkg->{'name'}-$pkg->{'version'}\E/) {
+				$started = 1;
+				}
+			elsif (/^==========/ || /^changelog stats/) {
+				$started = 0;
+				}
+			else {
+				$cl .= $_."\n";
+				}
+			}
+		close(YUMCL);
+
+		# Save the cache
+		if (!-d $yum_changelog_cache_dir) {
+			&make_dir($yum_changelog_cache_dir, 0700);
+			&open_tempfile(CACHE, ">$cfile");
+			&print_tempfile(CACHE, $cl);
+			&close_tempfile(CACHE);
+			}
+		}
+	return $cl;
+	}
+return undef;
 }
 
 # Returns 1 if an option should be shown to list all packages. Only true for
