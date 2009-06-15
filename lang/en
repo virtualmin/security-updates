@@ -86,3 +86,21 @@ refresh_clearing=Clearing package caches ..
 refresh_done=.. done
 refresh_available=Re-fetching available packages ..
 refresh_done2=.. found $1 in total
+
+view_title=Package Details
+view_header=Updatable package information
+view_name=Package name
+view_desc=Package description
+view_system=Update system
+view_state=Current state
+view_cversion=Installed version
+view_aversion=Available version
+view_source=Installation source
+view_changelog=Changelog for available version
+
+system_yum=YUM
+system_apt=APT
+system_csw=CSW (Blastwave)
+system_webmin=Webmin module
+system_usermin=Usermin module
+system_tgz=Webmin or Usermin tar.gz

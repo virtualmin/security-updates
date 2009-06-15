@@ -112,11 +112,9 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		{ 'type' => 'checkbox', 'name' => 'u',
 		  'value' => $p->{'update'}."/".$p->{'system'},
 		  'checked' => $need },
-		$c && $sft && $c->{'system'} ne 'webmin' &&
-		 $c->{'system'} ne 'tgz' ?
-		  "<a href='../software/edit_pack.cgi?package=".
-		  &urlize($c->{'name'})."&version=".
-		  &urlize($c->{'version'})."'>$c->{'name'}</a>" : $p->{'name'},
+		"<a href='view.cgi?all=$in{'all'}&name=".
+		  &urlize($c->{'name'})."&system=".
+		  &urlize($c->{'system'})."'>$c->{'name'}</a>",
 		$p->{'desc'},
 		$msg,
 		$source ? ( $source ) : $anysource ? ( "") : ( ),

@@ -236,7 +236,6 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 						  &generate_description($avail);
 						}
 					&set_pinned_version($avail);
-					&set_changelog($avail);
 					push(@rv, $avail);
 					}
 				}
@@ -248,7 +247,6 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 			$avail->{'update'} = $avail->{'name'};
 			$avail->{'name'} = &csw_to_pkgadd($avail->{'name'});
 			&set_pinned_version($avail);
-			&set_changelog($avail);
 			push(@rv, $avail);
 			}
 		}
@@ -1059,7 +1057,7 @@ if ($pkg->{'system'} eq 'yum') {
 		local $out = &backquote_command("yum -h 2>&1 </dev/null");
 		$supports_yum_changelog = $out =~ /changelog/ ? 1 : 0;
 		}
-	return if (!$supports_yum_changelog);
+	return undef if (!$supports_yum_changelog);
 
 	# Check if we have this info cached
 	local $cfile = $yum_changelog_cache_dir."/".
@@ -1078,7 +1076,7 @@ if ($pkg->{'system'} eq 'yum') {
 			elsif (/^==========/ || /^changelog stats/) {
 				$started = 0;
 				}
-			else {
+			elsif ($started) {
 				$cl .= $_."\n";
 				}
 			}
