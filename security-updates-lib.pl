@@ -2,10 +2,6 @@
 
 BEGIN { push(@INC, ".."); };
 eval "use WebminCore;";
-if ($@) {
-	do '../web-lib.pl';
-	do '../ui-lib.pl';
-	}
 &init_config();
 &foreign_require("software", "software-lib.pl");
 &foreign_require("cron", "cron-lib.pl");
