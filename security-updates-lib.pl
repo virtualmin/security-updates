@@ -945,7 +945,7 @@ elsif ($p->{'system'} eq 'apt') {
 
 return # RPM names
        $name =~ /^wbm-virtualmin-/ ? "Virtualmin plugin" :
-       $name =~ /^wbm-vm2-/ ? "VM2 plugin" :
+       $name =~ /^wbm-vm2-/ ? "Cloudmin plugin" :
        $name =~ /^wbm-/ ? "Webmin module" :
        $name =~ /^wbt-virtualmin-/ ? "Virtualmin theme" :
        $name =~ /^wbt-/ ? "Webmin theme" :
@@ -954,7 +954,7 @@ return # RPM names
 
        # Debian names
        $name =~ /^webmin-virtualmin-/ ? "Virtualmin plugin or theme" :
-       $name =~ /^webmin-vm2-/ ? "VM2 plugin" :
+       $name =~ /^webmin-vm2-/ ? "Cloudmin plugin" :
        $name =~ /^webmin-/ ? "Webmin module" :
        $name =~ /^usermin-virtualmin-/ ? "Usermin theme" :
        $name =~ /^usermin-/ ? "Usermin module" :
