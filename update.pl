@@ -58,7 +58,8 @@ if ($config{'sched_email'} && $body) {
 	local $mail = { 'headers' =>
 			[ [ 'From', $from ],
 			  [ 'To', $config{'sched_email'} ],
-			  [ 'Subject', "Security updates" ] ],
+			  [ 'Subject', "Package updates on ".
+                                       &get_system_hostname() ] ],
 			'attach' =>
 			[ { 'headers' => [ [ 'Content-type', 'text/plain' ] ],
 			    'data' => $body } ] };
