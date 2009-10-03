@@ -14,8 +14,8 @@ foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 		# An update is available
 		push(@todo, { 'name' => $c->{'name'},
 			      'update' => $a->{'update'},
+			      'oldversion' => $c->{'version'},
 			      'version' => $a->{'version'},
-			      'desc' => "New version released",
 			      'level' => $a->{'security'} ? 1 : 2 });
 		}
 	}
@@ -25,19 +25,19 @@ $tellcount = 0;
 foreach $t (@todo) {
 	if ($t->{'level'} <= $config{'sched_action'}) {
 		# Can install
-		$body .= "An update to $t->{'name'} $t->{'version'} is needed : $t->{'desc'}\n";
+		$body .= "An update to $t->{'name'} from $t->{'oldversion'} to $t->{'version'} is needed.\n";
 		($out, $done) = &capture_function_output(
 				  \&package_install, $t->{'update'});
 		if (@$done) {
 			$body .= "This update has been successfully installed.\n\n";
 			}
 		else {
-			$body .= "However, this update could not be installed! Try the update manually\nusing the Security Updates module.\n\n";
+			$body .= "However, this update could not be installed! Try the update manually\nusing the Virtualmin Package Updates module.\n\n";
 			}
 		}
 	else {
 		# Just tell the user about it
-		$body .= "An update to $t->{'name'} $t->{'version'} is available : $t->{'desc'}\n\n";
+		$body .= "An update to $t->{'name'} from $t->{'oldversion'} to $t->{'version'} is available.\n\n";
 		$tellcount++;
 		}
 	}
