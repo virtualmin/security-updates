@@ -232,7 +232,6 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 						$avail->{'desc'} ||=
 						  &generate_description($avail);
 						}
-					&set_pinned_version($avail);
 					push(@rv, $avail);
 					}
 				}
@@ -243,10 +242,12 @@ if ($nocache || &cache_expired($available_cache_file.int($all))) {
 		foreach my $avail (@avail) {
 			$avail->{'update'} = $avail->{'name'};
 			$avail->{'name'} = &csw_to_pkgadd($avail->{'name'});
-			&set_pinned_version($avail);
 			push(@rv, $avail);
 			}
 		}
+
+	# Apply version pinning
+	&set_pinned_versions(\@rv);
 
 	# Filter out dupes and sort by name
 	@rv = &filter_duplicates(\@rv);
@@ -975,70 +976,26 @@ elsif ($software::update_system eq "apt") {
 	}
 }
 
-# set_pinned_version(&package)
-# Given an APT package from the available, use apt-cache policy to check if it
-# should have the version number reduced to the pinned version.
-sub set_pinned_version
+# set_pinned_versions(&packages)
+# If on Debian, set available package versions based on APT pinning
+sub set_pinned_versions
 {
-local ($pkg) = @_;
-return 0 if ($pkg->{'system'} ne 'apt');
-local $rv = 0;
-local $qp = quotemeta($pkg->{'name'});
-local $out = &backquote_command("LANG='' LC_ALL='' apt-cache policy $qp 2>/dev/null");
-local $installed = $out =~ /Installed:\s+(\S+)/ ? $1 : undef;
-local $candidate = $out =~ /Candidate:\s+(\S+)/ ? $1 : undef;
-$candidate = "" if ($candidate eq "(none)");
-if ($installed && $candidate) {
-	# An installation candidate is defined .. use it
-	local $cepoch;
-	if ($candidate =~ s/^(\d+)://) {
-		$cepoch = $1;
-		}
-	if ($pkg->{'version'} ne $candidate) {
-		$pkg->{'version'} = $candidate;
-		$pkg->{'epoch'} = $cepoch;
-		}
-	$rv = 1;
-	}
-if ($installed && $candidate &&
-    $gconfig{'os_type'} eq 'debian-linux' && $gconfig{'os_version'} eq '4.0') {
-	# Don't offer to upgrade to Lenny packages .. first work out which
-	# versions apt-get knows about.
-	local @lines = split(/\r?\n/, $out);
-	local $found_versions;
-	local @versions;
-	for(my $i=0; $i<@lines; $i++) {
-		if ($lines[$i] =~ /\s*Version\s+table:/i) {
-			$found_versions = 1;
-			next;
-			}
-		next if (!$found_versions);
-		if ($lines[$i] =~ /^[ \*]+(\S+)/) {
-			# Found a version number
-			local $ver = $1;
-			$i++;
-			if ($lines[$i] =~ /^\s+(\d+)\s+(\S.*)$/) {
-				push(@versions, { 'version' => $ver,
-						  'pri' => $1,
-						  'url' => $2 });
+my ($avail) = @_;
+my @davail = grep { $_->{'system'} eq 'apt' } @$avail;
+return 0 if (!@davail);
+my $out = &backquote_command("LANG='' LC_ALL='' apt-cache policy 2>/dev/null");
+my $rv;
+foreach my $l (split(/\r?\n/, $out)) {
+	if ($l =~ /\s+(\S+)\s+\-\>\s+(\S+)/) {
+		my ($name, $pin) = ($1, $2);
+		my ($pkg) = grep { $_->{'name'} eq $name } @davail;
+		if ($pkg) {
+			$pkg->{'version'} = $pin;
+			if ($pkg->{'version'} =~ s/^(\d+)://) {
+				$pkg->{'epoch'} = $1;
 				}
+			$rv++;
 			}
-		}
-	# If the latest version is from stable, don't use it
-	@versions = sort { &compare_versions($b, $a) } @versions;
-	local ($nv) = grep { $_->{'version'} eq $pkg->{'version'} ||
-			     $_->{'version'} eq $pkg->{'epoch'}.':'.
-					     $pkg->{'version'} } @versions;
-	if ($nv && $nv->{'url'} =~ /stable/ && $nv->{'url'} !~ /virtualmin/) {
-		shift(@versions);
-		local $safever = @versions ? $versions[0]->{'version'}
-					   : $installed;
-		local $sepoch;
-		if ($safever =~ s/^(\d+)://) {
-			$sepoch = $1;
-			}
-		$pkg->{'version'} = $safever;
-		$pkg->{'epoch'} = $sepoch;
 		}
 	}
 return $rv;
