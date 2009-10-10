@@ -30,9 +30,14 @@ else {
 
 	foreach my $ps (@pkgs) {
 		($p, $s) = split(/\//, $ps);
+		next if ($donedep{$p});
 		print &text('update_pkg', "<tt>$p</tt>"),"<br>\n";
 		print "<ul>\n";
-		push(@got, &package_install($p, $s, $in{'all'}));
+		@pgot = &package_install($p, $s, $in{'all'});
+		foreach $g (@pgot) {
+			$donedep{$g}++;
+			}
+		push(@got, @pgot);
 		print "</ul><br>\n";
 		}
 	if (@got) {
