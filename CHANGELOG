@@ -3,3 +3,5 @@ On systems using YUM or APT, all packages available for update can be displayed,
 ---- Changes since 3.6 ----
 Security-critical updates are now shown in red on the main page, and a separate package state link is available to select them.
 Package names on the module's main page now link to a new page showing details about each update, including the change log if available.
+Internal changes to make finding pinned package versions faster on Debian.
+Support for finding all installed packages, for use on the System Information page and by Cloudmin.
