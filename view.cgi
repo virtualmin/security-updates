@@ -26,7 +26,9 @@ print &ui_table_start($text{'view_header'}, undef, 2);
 print &ui_table_row($text{'view_name'}, $p->{'name'});
 print &ui_table_row($text{'view_system'}, $text{'system_'.$p->{'system'}} ||
 					  uc($p->{'system'}));
-print &ui_table_row($text{'view_desc'}, $c->{'desc'});
+if ($c && $c->{'desc'}) {
+	print &ui_table_row($text{'view_desc'}, $c->{'desc'});
+	}
 
 # Current state
 print &ui_table_row($text{'view_state'},

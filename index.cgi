@@ -112,8 +112,8 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		  'value' => $p->{'update'}."/".$p->{'system'},
 		  'checked' => $need },
 		"<a href='view.cgi?all=$in{'all'}&mode=$in{'mode'}&name=".
-		  &urlize($c->{'name'})."&system=".
-		  &urlize($c->{'system'})."'>$c->{'name'}</a>",
+		  &urlize($p->{'name'})."&system=".
+		  &urlize($p->{'system'})."'>$p->{'name'}</a>",
 		$p->{'desc'},
 		$msg,
 		$source ? ( $source ) : $anysource ? ( "") : ( ),
