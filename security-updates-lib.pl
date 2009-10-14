@@ -212,7 +212,9 @@ else {
 sub list_available
 {
 local ($nocache, $all) = @_;
-if ($nocache || &cache_expired($available_cache_file.int($all))) {
+local $expired = &cache_expired($available_cache_file.int($all));
+if ($nocache || $expired == 2 ||
+    $expired == 1 && !&check_available_lock()) {
 	# Get from update system
 	local @rv;
 	local @avail = &packages_available();
@@ -272,6 +274,16 @@ else {
 	}
 }
 
+# check_available_lock()
+# Returns 1 if the package update system is currently locked
+sub check_available_lock
+{
+if ($software::update_system eq "yum") {
+	return &check_pid_file("/var/run/yum.pid");
+	}
+return 0;
+}
+
 # filter_duplicates(&packages)
 # Given a list of package structures, orders them by name and version number,
 # and removes dupes with the same name
@@ -284,12 +296,15 @@ local %done;
 return grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
 }
 
+# cache_expired(file)
+# Checks if some cache has expired. Returns 0 if OK, 1 if expired, 2 if
+# totally missing.
 sub cache_expired
 {
 local ($file) = @_;
 local @st = stat($file);
-if (!@st || !$config{'cache_time'} ||
-    time()-$st[9] > $config{'cache_time'}*60*60) {
+return 2 if (!@st);
+if (!$config{'cache_time'} || time()-$st[9] > $config{'cache_time'}*60*60) {
 	return 1;
 	}
 return 0;
