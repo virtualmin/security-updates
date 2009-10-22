@@ -5,3 +5,5 @@ Security-critical updates are now shown in red on the main page, and a separate 
 Package names on the module's main page now link to a new page showing details about each update, including the change log if available.
 Internal changes to make finding pinned package versions faster on Debian.
 Support for finding all installed packages, for use on the System Information page and by Cloudmin.
+---- Changes since 3.8 ----
+Added in-memory caching of installed and available packages.

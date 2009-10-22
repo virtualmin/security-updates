@@ -17,7 +17,14 @@ if ($in{'refresh'}) {
 	# Force re-fetch
 	print $text{'refresh_available'},"<br>\n";
 	@avail = &list_available();
-	print &text('refresh_done2', scalar(@avail)),"<p>\n";
+	@allavail = &list_available(0, 1);
+	if (@allavail) {
+		print &text('refresh_done3', scalar(@avail),
+					     scalar(@allavail)),"<p>\n";
+		}
+	else {
+		print &text('refresh_done2', scalar(@avail)),"<p>\n";
+		}
 
 	&webmin_log("refresh");
 	&ui_print_footer($redir, $text{'index_return'});

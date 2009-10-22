@@ -48,6 +48,18 @@ return $text{'index_euser'} if (!$user);
 return undef;
 }
 
+# get_software_packages()
+# Fills in software::packages with list of installed packages (if missing),
+# returns count.
+sub get_software_packages
+{
+if (!$get_software_packages_cache) {
+	%software::packages = ( );
+	$get_software_packages_cache = &software::list_packages();
+	}
+return $get_software_packages_cache;
+}
+
 # list_current(nocache)
 # Returns a list of packages and versions for the core packages managed
 # by this module. Return keys are :
@@ -61,7 +73,7 @@ sub list_current
 {
 local ($nocache) = @_;
 if ($nocache || &cache_expired($current_cache_file)) {
-	local $n = &software::list_packages();
+	local $n = &get_software_packages();
 	local @rv;
 	foreach my $p (@update_packages) {
 		local @pkgs = split(/\s+/, &package_resolve($p));
@@ -171,7 +183,7 @@ sub list_all_current
 local ($nocache) = @_;
 local ($nocache) = @_;
 if ($nocache || &cache_expired($current_all_cache_file)) {
-	local $n = &software::list_packages();
+	local $n = &get_software_packages();
 	local @rv;
 	local %pkgmap;
 	foreach my $p (@update_packages) {
@@ -395,6 +407,9 @@ return $name;
 # If not, nothing is returned.
 sub packages_available
 {
+if (@packages_available_cache) {
+	return @packages_available_cache;
+	}
 if (defined(&software::update_system_available)) {
 	# From a decent package system
 	local @rv = software::update_system_available();
@@ -436,6 +451,7 @@ if (defined(&software::update_system_available)) {
 				}
 			}
 		}
+	@packages_available_cache = @rv;
 	return @rv;
 	}
 return ( );
@@ -1081,6 +1097,7 @@ unlink($updates_cache_file);
 unlink($available_cache_file);
 unlink($available_cache_file.'0');
 unlink($available_cache_file.'1');
+@packages_available_cache = ( );
 }
 
 1;
