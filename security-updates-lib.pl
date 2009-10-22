@@ -640,7 +640,7 @@ sub free_virtualmin_licence
 {
 if (-r $virtualmin_licence) {
 	&read_env_file($virtualmin_licence, \%licence);
-	return 1 if ($licence{'SerialNumber'} eq 'GPL');
+	return $licence{'SerialNumber'} eq 'GPL' ? 1 : 0;
 	}
 return 0;
 }
