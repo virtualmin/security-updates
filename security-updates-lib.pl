@@ -6,6 +6,7 @@ eval "use WebminCore;";
 &foreign_require("software", "software-lib.pl");
 &foreign_require("cron", "cron-lib.pl");
 &foreign_require("webmin", "webmin-lib.pl");
+use Data::Dumper;
 
 @update_packages = ( "apache", "postfix", "sendmail", "bind", "procmail",
 		     "spamassassin", "logrotate", "webalizer", "mysql",
@@ -326,17 +327,17 @@ sub write_cache_file
 {
 local ($file, $arr) = @_;
 &open_tempfile(FILE, ">$file");
-&print_tempfile(FILE, &serialise_variable($arr));
+&print_tempfile(FILE, Dumper($arr));
 &close_tempfile(FILE);
 }
 
 sub read_cache_file
 {
 local ($file) = @_;
-&open_readfile(FILE, $file);
-local $line = <FILE>;
-close(FILE);
-local $arr = &unserialise_variable($line);
+local $dump = &read_file_contents($file);
+return () if (!$dump);
+return () if ($dump =~ /^ARRAY/);	# Old serialized format
+my $arr = eval $dump;
 return @$arr;
 }
 

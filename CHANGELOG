@@ -7,3 +7,4 @@ Internal changes to make finding pinned package versions faster on Debian.
 Support for finding all installed packages, for use on the System Information page and by Cloudmin.
 ---- Changes since 3.8 ----
 Added in-memory caching of installed and available packages.
+Changed the cache file format to Perl Data::Dumper, to reduce CPU use.
