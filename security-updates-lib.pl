@@ -44,7 +44,7 @@ $yum_changelog_cache_dir = "$module_config_directory/yumchangelog";
 sub test_connection
 {
 return undef if (&free_virtualmin_licence());	# GPL install
-local ($user, $pass, $host) = &get_user_pass();
+my ($user, $pass, $host) = &get_user_pass();
 return $text{'index_euser'} if (!$user);
 return undef;
 }
@@ -64,7 +64,7 @@ return $get_software_packages_cache;
 # list_current(nocache)
 # Returns a list of packages and versions for the core packages managed
 # by this module. Return keys are :
-#  name - The local package name (ie. CSWapache2)
+#  name - The my package name (ie. CSWapache2)
 #  update - Name used to refer to it by the updates system (ie. apache2)
 #  version - Version number
 #  epoch - Epoch part of the version
@@ -72,12 +72,12 @@ return $get_software_packages_cache;
 #  package - Original generic program, like apache
 sub list_current
 {
-local ($nocache) = @_;
+my ($nocache) = @_;
 if ($nocache || &cache_expired($current_cache_file)) {
-	local $n = &get_software_packages();
-	local @rv;
+	my $n = &get_software_packages();
+	my @rv;
 	foreach my $p (@update_packages) {
-		local @pkgs = split(/\s+/, &package_resolve($p));
+		my @pkgs = split(/\s+/, &package_resolve($p));
 		foreach my $pn (@pkgs) {
 			my $updatepn = $pn;
 			$pn = &csw_to_pkgadd($pn);
@@ -109,7 +109,7 @@ if ($nocache || &cache_expired($current_cache_file)) {
 	# Filter out dupes and sort by name
 	@rv = &filter_duplicates(\@rv);
 
-	local $incwebmin = &include_webmin_modules();
+	my $incwebmin = &include_webmin_modules();
 	if ($incwebmin) {
 		# Add installed Webmin modules
 		foreach my $minfo (&get_all_module_infos()) {
@@ -181,14 +181,14 @@ else {
 # Returns a list of all installed packages, in the same format as list_current
 sub list_all_current
 {
-local ($nocache) = @_;
-local ($nocache) = @_;
+my ($nocache) = @_;
+my ($nocache) = @_;
 if ($nocache || &cache_expired($current_all_cache_file)) {
-	local $n = &get_software_packages();
-	local @rv;
-	local %pkgmap;
+	my $n = &get_software_packages();
+	my @rv;
+	my %pkgmap;
 	foreach my $p (@update_packages) {
-		local @pkgs = split(/\s+/, &package_resolve($p));
+		my @pkgs = split(/\s+/, &package_resolve($p));
 		foreach my $pn (@pkgs) {
 			$pkgmap{$pn} = $p;
 			}
@@ -224,19 +224,19 @@ else {
 # system, that we are interested in.
 sub list_available
 {
-local ($nocache, $all) = @_;
-local $expired = &cache_expired($available_cache_file.int($all));
+my ($nocache, $all) = @_;
+my $expired = &cache_expired($available_cache_file.int($all));
 if ($nocache || $expired == 2 ||
     $expired == 1 && !&check_available_lock()) {
 	# Get from update system
-	local @rv;
-	local @avail = &packages_available();
+	my @rv;
+	my @avail = &packages_available();
 	if (!$all) {
 		# Limit to packages Virtualmin cares about
 		foreach my $p (@update_packages) {
-			local @pkgs = split(/\s+/, &package_resolve($p));
+			my @pkgs = split(/\s+/, &package_resolve($p));
 			foreach my $pn (@pkgs) {
-				local @mavail = grep { $_->{'name'} =~ /^$pn$/ }
+				my @mavail = grep { $_->{'name'} =~ /^$pn$/ }
 						     @avail;
 				foreach my $avail (@mavail) {
 					$avail->{'update'} = $avail->{'name'};
@@ -300,10 +300,10 @@ return 0;
 # and removes dupes with the same name
 sub filter_duplicates
 {
-local ($pkgs) = @_;
-local @rv = sort { $a->{'name'} cmp $b->{'name'} ||
+my ($pkgs) = @_;
+my @rv = sort { $a->{'name'} cmp $b->{'name'} ||
 	         &compare_versions($b, $a) } @$pkgs;
-local %done;
+my %done;
 return grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
 }
 
@@ -312,8 +312,8 @@ return grep { !$done{$_->{'name'},$_->{'system'}}++ } @rv;
 # totally missing.
 sub cache_expired
 {
-local ($file) = @_;
-local @st = stat($file);
+my ($file) = @_;
+my @st = stat($file);
 return 2 if (!@st);
 if (!$config{'cache_time'} || time()-$st[9] > $config{'cache_time'}*60*60) {
 	return 1;
@@ -323,7 +323,7 @@ return 0;
 
 sub write_cache_file
 {
-local ($file, $arr) = @_;
+my ($file, $arr) = @_;
 &open_tempfile(FILE, ">$file");
 &print_tempfile(FILE, Dumper($arr));
 &close_tempfile(FILE);
@@ -331,8 +331,8 @@ local ($file, $arr) = @_;
 
 sub read_cache_file
 {
-local ($file) = @_;
-local $dump = &read_file_contents($file);
+my ($file) = @_;
+my $dump = &read_file_contents($file);
 return () if (!$dump);
 return () if ($dump =~ /^ARRAY/);	# Old serialized format
 my $arr = eval $dump;
@@ -343,15 +343,15 @@ return @$arr;
 # Returns -1 if the version of pkg1 is older than pkg2, 1 if newer, 0 if same.
 sub compare_versions
 {
-local ($pkg1, $pkg2) = @_;
+my ($pkg1, $pkg2) = @_;
 if ($pkg1->{'system'} eq 'webmin' && $pkg2->{'system'} eq 'webmin') {
 	# Webmin module version compares are always numeric
 	return $pkg1->{'version'} <=> $pkg2->{'version'};
 	}
-local $ec = $pkg1->{'epoch'} <=> $pkg2->{'epoch'};
+my $ec = $pkg1->{'epoch'} <=> $pkg2->{'epoch'};
 if ($ec && ($pkg1->{'epoch'} eq '' || $pkg2->{'epoch'} eq '') &&
     $pkg1->{'system'} eq 'apt') {
-	# On some Debian systems, we don't have a local epoch
+	# On some Debian systems, we don't have a my epoch
 	$ec = undef;
 	}
 return $ec ||
@@ -360,8 +360,8 @@ return $ec ||
 
 sub find_cron_job
 {
-local @jobs = &cron::list_cron_jobs();
-local ($job) = grep { $_->{'user'} eq 'root' &&
+my @jobs = &cron::list_cron_jobs();
+my ($job) = grep { $_->{'user'} eq 'root' &&
 		      $_->{'command'} eq $cron_cmd } @jobs;
 return $job;
 }
@@ -372,16 +372,16 @@ return $job;
 # if the OS has one (YUM or APT, or from Virtualmin's built-in list)
 sub package_resolve
 {
-local ($name) = @_;
-local $realos = $gconfig{'real_os_type'};
+my ($name) = @_;
+my $realos = $gconfig{'real_os_type'};
 $realos =~ s/ /-/g;
-local $realver = $gconfig{'real_os_version'};
+my $realver = $gconfig{'real_os_version'};
 $realver =~ s/ /-/g;
 if (open(RESOLV, "$module_root_directory/resolve.$realos-$realver") ||
     open(RESOLV, "$module_root_directory/resolve.$realos") ||
     open(RESOLV, "$module_root_directory/resolve.$gconfig{'os_type'}-$gconfig{'os_version'}") ||
     open(RESOLV, "$module_root_directory/resolve.$gconfig{'os_type'}")) {
-	local $rv;
+	my $rv;
 	while(<RESOLV>) {
 		if (/^(\S+)\s+(.*)/ && $1 eq $name) {
 			$rv = $2;
@@ -411,8 +411,8 @@ if (@packages_available_cache) {
 	}
 if (defined(&software::update_system_available)) {
 	# From a decent package system
-	local @rv = software::update_system_available();
-	local %done;
+	my @rv = software::update_system_available();
+	my %done;
 	foreach my $p (@rv) {
 		$p->{'system'} = $software::update_system;
 		$p->{'version'} =~ s/,REV=.*//i;		# For CSW
@@ -431,10 +431,10 @@ if (defined(&software::update_system_available)) {
 		if (!$done_rhn_lib++) {
 			do "../software/rhn-lib.pl";
 			}
-		local @rhnrv = &update_system_available();
+		my @rhnrv = &update_system_available();
 		foreach my $p (@rhnrv) {
 			$p->{'system'} = "rhn";
-			local $d = $done{$p->{'name'}};
+			my $d = $done{$p->{'name'}};
 			if ($d) {
 				# Seen already .. but is this better?
 				if (&compare_versions($p, $d) > 0) {
@@ -461,9 +461,9 @@ return ( );
 # a list of updated package names.
 sub package_install
 {
-local ($name, $system, $all) = @_;
-local @rv;
-local ($pkg) = grep { $_->{'update'} eq $name &&
+my ($name, $system, $all) = @_;
+my @rv;
+my ($pkg) = grep { $_->{'update'} eq $name &&
 		      ($_->{'system'} eq $system || !$system) }
 		    sort { &compare_versions($b, $a) }
 		         &list_available(0, $all);
@@ -473,14 +473,14 @@ if (!$pkg) {
 	}
 if ($pkg->{'system'} eq 'webmin') {
 	# Webmin module, which we can download and install 
-	local ($host, $port, $page, $ssh) =
+	my ($host, $port, $page, $ssh) =
 		&parse_http_url($pkg->{'updatesurl'});
-	local ($mhost, $mport, $mpage, $mssl) =
+	my ($mhost, $mport, $mpage, $mssl) =
 		&parse_http_url($pkg->{'url'}, $host, $port, $page, $ssl);
-	local $mfile;
+	my $mfile;
 	($mfile = $mpage) =~ s/^(.*)\///;
-	local $mtemp = &transname($mfile);
-	local $error;
+	my $mtemp = &transname($mfile);
+	my $error;
 	print &text('update_wdownload', $pkg->{'name'}),"<br>\n";
 	&http_download($mhost, $mport, $mpage, $mtemp, \$error, undef, $mssl,
 		       $webmin::config{'upuser'}, $webmin::config{'uppass'});
@@ -492,7 +492,7 @@ if ($pkg->{'system'} eq 'webmin') {
 
 	# Install the module
 	print &text('update_winstall', $pkg->{'name'}),"<br>\n";
-	local $irv = &webmin::install_webmin_module($mtemp, 1, 0);
+	my $irv = &webmin::install_webmin_module($mtemp, 1, 0);
 	if (!ref($irv)) {
 		print &text('update_ewinstall', $irv),"<p>\n";
 		}
@@ -504,13 +504,13 @@ if ($pkg->{'system'} eq 'webmin') {
 elsif ($pkg->{'system'} eq 'tgz') {
 	# Tar file of Webmin or Usermin, which we have to download and
 	# install into the destination directory
-	local $temp = &transname($pkg->{'name'}."-".$pkg->{'version'}.
+	my $temp = &transname($pkg->{'name'}."-".$pkg->{'version'}.
 				 ".tar.gz");
-	local $error;
+	my $error;
 	print &text('update_tgzdownload', ucfirst($pkg->{'name'})),"<br>\n";
-	local ($user, $pass) = &get_user_pass();
-	local $free = free_virtualmin_licence();
-	local $path = $pkg->{'name'} eq 'webmin' && $free ?
+	my ($user, $pass) = &get_user_pass();
+	my $free = free_virtualmin_licence();
+	my $path = $pkg->{'name'} eq 'webmin' && $free ?
 			$free_webmin_download_path :
 		      $pkg->{'name'} eq 'webmin' && !$free ?
 			$webmin_download_path :
@@ -524,19 +524,19 @@ elsif ($pkg->{'system'} eq 'tgz') {
 		return ( );
 		}
 	else {
-		local @st = stat($temp);
+		my @st = stat($temp);
 		print &text('update_tgzdownloaded', &nice_size($st[7])),"<p>\n";
 		}
 
 	# Get the current install directory
 	print $text{'update_tgzuntar'},"<br>\n";
-	local $curdir;
+	my $curdir;
 	if ($pkg->{'name'} eq 'webmin') {
 		$curdir = $root_directory;
 		$pkg_config_dir = $config_directory;
 		}
 	else {
-		local %miniserv;
+		my %miniserv;
 		&foreign_require("usermin", "usermin-lib.pl");
 		&usermin::get_usermin_miniserv_config(\%miniserv);
 		$curdir = $miniserv{'root'};
@@ -550,22 +550,22 @@ elsif ($pkg->{'system'} eq 'tgz') {
 		print $text{'update_econfigdir'},"<p>\n";
 		return ( );
 		}
-	local $targetdir = &read_file_contents("$pkg_config_dir/install-dir");
+	my $targetdir = &read_file_contents("$pkg_config_dir/install-dir");
 	$targetdir =~ s/\r|\n//g;
 
 	# Un-tar the archive next to it
-	local $pardir = $curdir;
+	my $pardir = $curdir;
 	$pardir =~ s/\/([^\/]+)$//;
-	local $out = &backquote_command("cd ".quotemeta($pardir)." && ".
+	my $out = &backquote_command("cd ".quotemeta($pardir)." && ".
 					"gunzip -c $temp | tar xf -");
 	if ($?) {
-		local @lines = split(/\n/, $out);
+		my @lines = split(/\n/, $out);
 		while(@lines > 10) { shift(@lines); }  # Last 10 only
 		print "<pre>",&html_escape(join("\n", @lines)),"</pre>\n";
 		print $text{'update_etgzuntar'},"<p>\n";
 		return ( );
 		}
-	local $xtractdir = $pardir."/".$pkg->{'name'}."-".$pkg->{'version'};
+	my $xtractdir = $pardir."/".$pkg->{'name'}."-".$pkg->{'version'};
 	print $text{'update_tgzuntardone'},"<p>\n";
 
 	# Save this CGI from being killed by the upgrade
@@ -633,7 +633,7 @@ return @rv;
 # Returns the username and password to use for HTTP requests, and the base site
 sub get_user_pass
 {
-local %licence;
+my %licence;
 if (-r $virtualmin_licence) {
 	&read_env_file($virtualmin_licence, \%licence);
 	return ($licence{'SerialNumber'}, $licence{'LicenseKey'},
@@ -667,22 +667,21 @@ return 0;
 # caches, 2=flush only current
 sub list_possible_updates
 {
-local ($nocache, $all) = @_;
-local @rv;
-local @current = $all ? &list_all_current($nocache)
+my ($nocache, $all) = @_;
+my @rv;
+my @current = $all ? &list_all_current($nocache)
                       : &list_current($nocache);
-local @avail = &list_available($nocache == 1, $all);
-local %availmap;
+my @avail = &list_available($nocache == 1, $all);
+my %availmap;
 foreach my $a (@avail) {
         my $oa = $availmap{$a->{'name'},$a->{'system'}};
         if (!$oa || &compare_versions($a, $oa) > 0) {
                 $availmap{$a->{'name'},$a->{'system'}} = $a;
                 }
         }
-local ($a, $c, $u);
-foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
+foreach my $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
-	$a = $availmap{$c->{'name'},$c->{'system'}};
+	my $a = $availmap{$c->{'name'},$c->{'system'}};
 	if ($a->{'version'} && &compare_versions($a, $c) > 0) {
 		# A regular update is available
 		push(@rv, { 'name' => $a->{'name'},
@@ -702,14 +701,13 @@ return @rv;
 # Returns a list of packages that could be installed, but are not yet
 sub list_possible_installs
 {
-local ($nocache) = @_;
-local @rv;
-local @current = &list_current($nocache);
-local @avail = &list_available($nocache == 1);
-local ($a, $c);
-foreach $a (sort { $a->{'name'} cmp $b->{'name'} } @avail) {
-	($c) = grep { $_->{'name'} eq $a->{'name'} &&
-		      $_->{'system'} eq $a->{'system'} } @current;
+my ($nocache) = @_;
+my @rv;
+my @current = &list_current($nocache);
+my @avail = &list_available($nocache == 1);
+foreach my $a (sort { $a->{'name'} cmp $b->{'name'} } @avail) {
+	my ($c) = grep { $_->{'name'} eq $a->{'name'} &&
+		         $_->{'system'} eq $a->{'system'} } @current;
 	if (!$c && &installation_candiate($a)) {
 		push(@rv, { 'name' => $a->{'name'},
 			    'update' => $a->{'update'},
@@ -728,7 +726,7 @@ return @rv;
 # real package name like CSWap2modphp5
 sub csw_to_pkgadd
 {
-local ($pn) = @_;
+my ($pn) = @_;
 if ($gconfig{'os_type'} eq 'solaris') {
 	$pn =~ s/[_\-]//g;
 	$pn = "CSW$pn";
@@ -741,11 +739,11 @@ return $pn;
 # a separate pkginfo call to get it.
 sub fix_pkgadd_version
 {
-local ($pkg) = @_;
+my ($pkg) = @_;
 if ($gconfig{'os_type'} eq 'solaris') {
 	if (!$pkg->{'version'}) {
 		# Make an extra call to get the version
-		local @pinfo = &software::package_info($pkg->{'name'});
+		my @pinfo = &software::package_info($pkg->{'name'});
 		$pinfo[4] =~ s/,REV=.*//i;
 		$pkg->{'version'} = $pinfo[4];
 		}
@@ -765,7 +763,7 @@ $pkg->{'desc'} =~ s/^\Q$pkg->{'update'}\E\s+\-\s+//;
 sub include_webmin_modules
 {
 return 0 if (&webmin::shared_root_directory());
-local $type = &read_file_contents("$root_directory/install-type");
+my $type = &read_file_contents("$root_directory/install-type");
 chop($type);
 if (!$type) {
 	# Webmin tar.gz install
@@ -774,7 +772,7 @@ if (!$type) {
 else {
 	# How was virtual-server installed?
 	return 0 if (!&foreign_check("virtual-server"));
-	local $vtype = &read_file_contents(
+	my $vtype = &read_file_contents(
 		&module_root_directory("virtual-server")."/install-type");
 	chop($vtype);
 	if (!$vtype) {
@@ -792,16 +790,16 @@ sub include_usermin_modules
 {
 if (&foreign_installed("usermin")) {
 	&foreign_require("usermin", "usermin-lib.pl");
-	local $type = &usermin::get_install_type();
+	my $type = &usermin::get_install_type();
 	if (!$type) {
 		# Usermin tar.gz install
 		return 1;
 		}
 	else {
 		# How was virtual-server-theme installed?
-		local %miniserv;
+		my %miniserv;
 		&usermin::get_usermin_miniserv_config(\%miniserv);
-		local $vtype = &read_file_contents(
+		my $vtype = &read_file_contents(
 			"$miniserv{'root'}/virtual-server-theme/install-type");
 		chop($vtype);
 		if (!$vtype) {
@@ -818,22 +816,22 @@ return 0;
 # Returns a list of Webmin modules available for update
 sub webmin_modules_available
 {
-local @rv;
-local @urls = $webmin::config{'upsource'} ?
+my @rv;
+my @urls = $webmin::config{'upsource'} ?
 			split(/\t+/, $webmin::config{'upsource'}) :
 			( $webmin::update_url );
-local %donewebmin;
+my %donewebmin;
 foreach my $url (@urls) {
-	local ($updates, $host, $port, $page, $ssl) =
+	my ($updates, $host, $port, $page, $ssl) =
 	    &webmin::fetch_updates($url, $webmin::config{'upuser'},
 					 $webmin::config{'uppass'});
 	foreach $u (@$updates) {
 		# Skip modules that are not for this version of Webmin, IF this
 		# is a core module or is not installed
-		local %minfo = &get_module_info($u->[0]);
-		local %tinfo = &get_theme_info($u->[0]);
-		local %info = %minfo ? %minfo : %tinfo;
-		local $noinstall = !%info &&
+		my %minfo = &get_module_info($u->[0]);
+		my %tinfo = &get_theme_info($u->[0]);
+		my %info = %minfo ? %minfo : %tinfo;
+		my $noinstall = !%info &&
 				   $u->[0] !~ /(virtualmin|virtual-server)-/;
 		next if (($u->[1] >= &webmin::get_webmin_base_version() + .01 ||
 			  $u->[1] < &webmin::get_webmin_base_version()) &&
@@ -841,7 +839,7 @@ foreach my $url (@urls) {
 			  !$webmin::config{'upthird'}));
 
 		# Skip if not supported on this OS
-		local $osinfo = { 'os_support' => $u->[3] };
+		my $osinfo = { 'os_support' => $u->[3] };
 		next if (!&check_os_support($osinfo));
 
 		next if ($donewebmin{$u->[0],$u->[1]}++);
@@ -859,10 +857,10 @@ foreach my $url (@urls) {
 
 # Add latest Webmin version available from Virtualmin, but only if was a
 # tar.gz install
-local $free = free_virtualmin_licence();
-local ($user, $pass) = &get_user_pass();
+my $free = free_virtualmin_licence();
+my ($user, $pass) = &get_user_pass();
 if (&include_webmin_modules() == 1) {
-	local ($wver, $error);
+	my ($wver, $error);
 	&http_download($virtualmin_host, $virtualmin_port,
 		       $free ? $free_webmin_version_path : $webmin_version_path,
 		       \$wver, \$error, undef, 0, $user, $pass);
@@ -878,7 +876,7 @@ if (&include_webmin_modules() == 1) {
 
 # And Usermin
 if (&include_usermin_modules() == 1) {
-	local ($uver, $error);
+	my ($uver, $error);
 	&http_download($virtualmin_host, $virtualmin_port,
 		     $free ? $free_usermin_version_path : $usermin_version_path,
 		     \$uver, \$error, undef, 0, $user, $pass);
@@ -900,7 +898,7 @@ return @rv;
 # For now, only Virtualmin plugins are considered.
 sub installation_candiate
 {
-local ($p) = @_;
+my ($p) = @_;
 if (!defined($webmin_install_type_cache)) {
 	$webmin_install_type_cache = &webmin::get_install_type() || "";
 	}
@@ -933,16 +931,16 @@ return # RPM packages from YUM
 # Fakes up a description for a Webmin/Usermin module/theme package
 sub generate_description
 {
-local ($p) = @_;
-local $name = $p->{'name'};
+my ($p) = @_;
+my $name = $p->{'name'};
 if ($p->{'system'} eq 'yum') {
 	# Use yum info to get the description, and cache it
-	local %yumcache;
+	my %yumcache;
 	&read_file_cached($yum_cache_file, \%yumcache);
 	if ($yumcache{$p->{'name'}."-".$p->{'version'}}) {
 		return $yumcache{$p->{'name'}."-".$p->{'version'}};
 		}
-	local ($desc, $started_desc);
+	my ($desc, $started_desc);
 	open(YUM, "yum info ".quotemeta($name)." |");
 	while(<YUM>) {
 		s/\r|\n//g;
@@ -962,12 +960,12 @@ if ($p->{'system'} eq 'yum') {
 	}
 elsif ($p->{'system'} eq 'apt') {
 	# Use APT to get description
-	local %aptcache;
+	my %aptcache;
 	&read_file_cached($apt_cache_file, \%aptcache);
 	if ($aptcache{$p->{'name'}."-".$p->{'version'}}) {
 		return $aptcache{$p->{'name'}."-".$p->{'version'}};
 		}
-	local ($desc, $started_desc);
+	my ($desc, $started_desc);
 	open(YUM, "apt-cache show ".quotemeta($name)." |");
 	while(<YUM>) {
 		s/\r|\n//g;
@@ -1055,22 +1053,22 @@ while(@davail) {
 # If possible, returns information about what has changed in some update
 sub get_changelog
 {
-local ($pkg) = @_;
+my ($pkg) = @_;
 if ($pkg->{'system'} eq 'yum') {
 	# See if yum supports changelog
 	if (!defined($supports_yum_changelog)) {
-		local $out = &backquote_command("yum -h 2>&1 </dev/null");
+		my $out = &backquote_command("yum -h 2>&1 </dev/null");
 		$supports_yum_changelog = $out =~ /changelog/ ? 1 : 0;
 		}
 	return undef if (!$supports_yum_changelog);
 
 	# Check if we have this info cached
-	local $cfile = $yum_changelog_cache_dir."/".
+	my $cfile = $yum_changelog_cache_dir."/".
 		       $pkg->{'name'}."-".$pkg->{'version'};
-	local $cl = &read_file_contents($cfile);
+	my $cl = &read_file_contents($cfile);
 	if (!$cl) {
 		# Run it for this package and version
-		local $started = 0;
+		my $started = 0;
 		&open_execute_command(YUMCL, "yum changelog all ".
 					     quotemeta($pkg->{'name'}), 1, 1);
 		while(<YUMCL>) {
