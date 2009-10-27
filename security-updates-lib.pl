@@ -672,12 +672,17 @@ local @rv;
 local @current = $all ? &list_all_current($nocache)
                       : &list_current($nocache);
 local @avail = &list_available($nocache == 1, $all);
-@avail = sort { &compare_versions($b, $a) } @avail;
+local %availmap;
+foreach my $a (@avail) {
+        my $oa = $availmap{$a->{'name'},$a->{'system'}};
+        if (!$oa || &compare_versions($a, $oa) > 0) {
+                $availmap{$a->{'name'},$a->{'system'}} = $a;
+                }
+        }
 local ($a, $c, $u);
 foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
 	# Work out the status
-	($a) = grep { $_->{'name'} eq $c->{'name'} &&
-		      $_->{'system'} eq $c->{'system'} } @avail;
+	$a = $availmap{$c->{'name'},$c->{'system'}};
 	if ($a->{'version'} && &compare_versions($a, $c) > 0) {
 		# A regular update is available
 		push(@rv, { 'name' => $a->{'name'},
