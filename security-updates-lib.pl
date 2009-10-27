@@ -705,9 +705,12 @@ my ($nocache) = @_;
 my @rv;
 my @current = &list_current($nocache);
 my @avail = &list_available($nocache == 1);
+my %currentmap;
+foreach my $c (@current) {
+	$currentmap{$c->{'name'},$c->{'system'}} = $c;
+	}
 foreach my $a (sort { $a->{'name'} cmp $b->{'name'} } @avail) {
-	my ($c) = grep { $_->{'name'} eq $a->{'name'} &&
-		         $_->{'system'} eq $a->{'system'} } @current;
+	my $c = $currentmap{$a->{'name'},$a->{'system'}};
 	if (!$c && &installation_candiate($a)) {
 		push(@rv, { 'name' => $a->{'name'},
 			    'update' => $a->{'update'},
