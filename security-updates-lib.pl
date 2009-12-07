@@ -332,11 +332,11 @@ my ($file, $arr) = @_;
 sub read_cache_file
 {
 my ($file) = @_;
-my $dump = &read_file_contents($file);
-return () if (!$dump);
-return () if ($dump =~ /^ARRAY/);	# Old serialized format
-my $arr = eval $dump;
-return @$arr;
+if (-r $file) {
+	do $file;
+	return @$VAR1;
+	}
+return ( );
 }
 
 # compare_versions(&pkg1, &pk2)
