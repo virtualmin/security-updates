@@ -527,7 +527,8 @@ elsif ($pkg->{'system'} eq 'tgz') {
 	&http_download($virtualmin_host, $virtualmin_port, $path,
 		       $temp, \$error, undef, 0, $user, $pass);
 	if ($error || !-r $temp) {
-		print &text('update_ewdownload', $error),"<p>\n";
+		print &text('update_ewdownload',
+			    $error || "Nothing downloaded"),"<p>\n";
 		return ( );
 		}
 	else {
