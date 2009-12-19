@@ -32,6 +32,7 @@ $free_webmin_version_path = "$config{'suffix'}/gpl/wbm/webmin-version";
 $usermin_version_path = "$config{'suffix'}/wbm/usermin-version";
 $free_usermin_version_path = "$config{'suffix'}/gpl/wbm/usermin-version";
 $webmin_download_path = "$config{'suffix'}/wbm/webmin-current.tar.gz";
+$usermin_download_path = "$config{'suffix'}/wbm/usermin-current.tar.gz";
 $free_webmin_download_path = "$config{'suffix'}/gpl/wbm/webmin-current.tar.gz";
 $free_usermin_download_path = "$config{'suffix'}/gpl/wbm/usermin-current.tar.gz";
 
