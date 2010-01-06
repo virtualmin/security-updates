@@ -17,7 +17,7 @@ if ($err) {
 # See if any security updates exist
 $in{'mode'} ||= 'both';
 $in{'all'} = 0 if (!defined($in{'all'}));
-@avail = &list_available(0, $in{'all'});
+@avail = &list_for_mode($in{'mode'}, 0, $in{'all'});
 ($sec) = grep { $_->{'security'} } @avail;
 
 # Show mode selector (all, updates only, updates and new)

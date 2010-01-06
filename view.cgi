@@ -6,7 +6,7 @@ require './security-updates-lib.pl';
 &ReadParse();
 
 # Get the package
-@avail = &list_available(0, $in{'all'});
+@avail = &list_for_mode($in{'mode'}, 0, $in{'all'});
 ($a) = grep { $_->{'name'} eq $in{'name'} &&
 	      $_->{'system'} eq $in{'system'} } @avail;
 @current = $in{'all'} ? &list_all_current(0) : &list_current(0);

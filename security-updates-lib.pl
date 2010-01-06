@@ -20,6 +20,7 @@ use Data::Dumper;
 $available_cache_file = "$module_config_directory/available.cache";
 $current_cache_file = "$module_config_directory/current.cache";
 $current_all_cache_file = "$module_config_directory/current-all.cache";
+$updates_cache_file = "$module_config_directory/updates.cache";
 $cron_cmd = "$module_config_directory/update.pl";
 
 $virtualmin_host = $config{'host'} || "software.virtualmin.com";
@@ -234,32 +235,15 @@ if ($nocache || $expired == 2 ||
 	my @avail = &packages_available();
 	if (!$all) {
 		# Limit to packages Virtualmin cares about
-		foreach my $p (@update_packages) {
-			my @pkgs = split(/\s+/, &package_resolve($p));
-			foreach my $pn (@pkgs) {
-				my @mavail = grep { $_->{'name'} =~ /^$pn$/ }
-						     @avail;
-				foreach my $avail (@mavail) {
-					$avail->{'update'} = $avail->{'name'};
-					$avail->{'name'} =
-					    &csw_to_pkgadd($avail->{'name'});
-					$avail->{'package'} = $p;
-					if (&installation_candiate($avail)) {
-						$avail->{'desc'} ||=
-						  &generate_description($avail);
-						}
-					push(@rv, $avail);
-					}
-				}
-			}
+		@avail = &filter_virtualmin(\@avail);
 		}
-	else {
-		# All on system
-		foreach my $avail (@avail) {
-			$avail->{'update'} = $avail->{'name'};
-			$avail->{'name'} = &csw_to_pkgadd($avail->{'name'});
-			push(@rv, $avail);
+	foreach my $avail (@avail) {
+		$avail->{'update'} = $avail->{'name'};
+		$avail->{'name'} = &csw_to_pkgadd($avail->{'name'});
+		if (!$all && &installation_candiate($avail)) {
+			$avail->{'desc'} ||= &generate_description($avail);
 			}
+		push(@rv, $avail);
 		}
 	&set_pinned_versions(\@rv);
 
@@ -284,6 +268,25 @@ if ($nocache || $expired == 2 ||
 else {
 	return &read_cache_file($available_cache_file.int($all));
 	}
+}
+
+# filter_virtualmin(&packages)
+# Given a list of updates to include only those Virtualmin-related
+sub filter_virtualmin
+{
+my ($avail) = @_;
+my @rv;
+foreach my $p (@update_packages) {
+	my @pkgs = split(/\s+/, &package_resolve($p));
+	foreach my $pn (@pkgs) {
+		my @mavail = grep { $_->{'name'} =~ /^$pn$/ } @$avail;
+		foreach my $avail (@mavail) {
+			$avail->{'package'} = $p;
+			push(@rv, $avail);
+			}
+		}
+	}
+return @rv;
 }
 
 # check_available_lock()
@@ -464,6 +467,46 @@ if (defined(&software::update_system_available)) {
 return ( );
 }
 
+# supports_updates_available()
+# Returns true if the package update system has a function to find just
+# updates, and we aren't including Webmin modules
+sub supports_updates_available
+{
+return defined(&software::update_system_updates) &&
+       !&include_webmin_modules();
+}
+
+# updates_available(no-cache, all)
+# Returns an array of hash refs of package updates available, according to
+# the update system, with caching.
+sub updates_available
+{
+my ($nocache, $all) = @_;
+if (!defined(@updates_available_cache)) {
+	if ($nocache || &cache_expired($updates_cache_file)) {
+		# Get from original source
+		@updates_available_cache = &software::update_system_updates();
+		foreach my $a (@updates_available_cache) {
+			$a->{'update'} = $a->{'name'};
+			$a->{'system'} = $software::update_system;
+			}
+		&write_cache_file($updates_cache_file,
+				  \@updates_available_cache);
+		}
+	else {
+		# Use on-disk cache
+		@updates_available_cache =
+			&read_cache_file($updates_cache_file);
+		}
+	}
+if ($all) {
+	return @updates_available_cache;
+	}
+else {
+	return &filter_virtualmin(\@updates_available_cache);
+	}
+}
+
 # package_install(package, [system], [check-all])
 # Install some package, either from an update system or from Virtualmin. Returns
 # a list of updated package names.
@@ -471,10 +514,21 @@ sub package_install
 {
 my ($name, $system, $all) = @_;
 my @rv;
-my ($pkg) = grep { $_->{'update'} eq $name &&
-		      ($_->{'system'} eq $system || !$system) }
-		    sort { &compare_versions($b, $a) }
-		         &list_available(0, $all);
+my $pkg;
+
+# First get from list of updates
+($pkg) = grep { $_->{'update'} eq $name &&
+		($_->{'system'} eq $system || !$system) }
+	      sort { &compare_versions($b, $a) }
+		   &list_possible_updates(0, $all);
+if (!$pkg) {
+	# Then try list of all available packages
+	($pkg) = grep { $_->{'update'} eq $name &&
+			($_->{'system'} eq $system || !$system) }
+		      sort { &compare_versions($b, $a) }
+			   &list_available(0, $all);
+	}
+
 if (!$pkg) {
 	print &text('update_efindpkg', $name),"<p>\n";
 	return ( );
@@ -679,28 +733,55 @@ sub list_possible_updates
 my ($nocache, $all) = @_;
 my @rv;
 my @current = $all ? &list_all_current($nocache)
-                      : &list_current($nocache);
-my @avail = &list_available($nocache == 1, $all);
-my %availmap;
-foreach my $a (@avail) {
-        my $oa = $availmap{$a->{'name'},$a->{'system'}};
-        if (!$oa || &compare_versions($a, $oa) > 0) {
-                $availmap{$a->{'name'},$a->{'system'}} = $a;
-                }
-        }
-foreach my $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
-	# Work out the status
-	my $a = $availmap{$c->{'name'},$c->{'system'}};
-	if ($a->{'version'} && &compare_versions($a, $c) > 0) {
-		# A regular update is available
+                   : &list_current($nocache);
+if (&supports_updates_available()) {
+	# Software module supplies a function that can list just packages
+	# that need updating
+	my %currentmap;
+	foreach my $c (@current) {
+		$currentmap{$c->{'name'},$c->{'system'}} ||= $c;
+		}
+	foreach my $a (&updates_available($nocache == 1, $all)) {
+		my $c = $currentmap{$a->{'name'},$a->{'system'}};
+		next if (!$c);
+		next if ($a->{'version'} eq $c->{'version'});
 		push(@rv, { 'name' => $a->{'name'},
 			    'update' => $a->{'update'},
 			    'system' => $a->{'system'},
 			    'version' => $a->{'version'},
 			    'oldversion' => $c->{'version'},
 			    'epoch' => $a->{'epoch'},
+			    'oldepoch' => $c->{'epoch'},
+			    'security' => $a->{'security'},
+			    'source' => $a->{'source'},
 			    'desc' => $c->{'desc'} || $a->{'desc'},
 			    'severity' => 0 });
+		}
+	}
+else {
+	# Compute from current and available list
+	my @avail = &list_available($nocache == 1, $all);
+	my %availmap;
+	foreach my $a (@avail) {
+		my $oa = $availmap{$a->{'name'},$a->{'system'}};
+		if (!$oa || &compare_versions($a, $oa) > 0) {
+			$availmap{$a->{'name'},$a->{'system'}} = $a;
+			}
+		}
+	foreach my $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
+		# Work out the status
+		my $a = $availmap{$c->{'name'},$c->{'system'}};
+		if ($a->{'version'} && &compare_versions($a, $c) > 0) {
+			# A regular update is available
+			push(@rv, { 'name' => $a->{'name'},
+				    'update' => $a->{'update'},
+				    'system' => $a->{'system'},
+				    'version' => $a->{'version'},
+				    'oldversion' => $c->{'version'},
+				    'epoch' => $a->{'epoch'},
+				    'desc' => $c->{'desc'} || $a->{'desc'},
+				    'severity' => 0 });
+			}
 		}
 	}
 return @rv;
@@ -1127,6 +1208,17 @@ unlink($available_cache_file.'0');
 unlink($available_cache_file.'1');
 @packages_available_cache = ( );
 %read_cache_file_cache = ( );
+}
+
+# list_for_mode(mode, nocache, all)
+# If not is 'updates' or 'security', return just updates. Othewise, return
+# all available packages.
+sub list_for_mode
+{
+my ($mode, $nocache, $all) = @_;
+return $mode eq 'updates' || $mode eq 'security' ?
+	&list_possible_updates($nocache, $all) :
+	&list_available($nocache, $all);
 }
 
 1;

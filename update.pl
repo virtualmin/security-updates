@@ -5,20 +5,10 @@ $no_acl_check++;
 require './security-updates-lib.pl';
 
 # See what needs doing
-@current = &list_current(1);
-@avail = &list_available(1);
-foreach $c (sort { $a->{'name'} cmp $b->{'name'} } @current) {
-	($a) = grep { $_->{'name'} eq $c->{'name'} &&
-		      $_->{'system'} eq $c->{'system'} } @avail;
-	if ($a->{'version'} && &compare_versions($a, $c) > 0) {
-		# An update is available
-		push(@todo, { 'name' => $c->{'name'},
-			      'update' => $a->{'update'},
-			      'oldversion' => $c->{'version'},
-			      'version' => $a->{'version'},
-			      'level' => $a->{'security'} ? 1 : 2 });
-		}
-	}
+@todo = &list_possible_updates(1);
+foreach $a (@todo) {
+        $a->{'level'} = $a->{'security'} ? 1 : 2;
+        }
 
 # Install packages that are needed
 $tellcount = 0;

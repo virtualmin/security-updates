@@ -85,8 +85,8 @@ refresh_title=Refreshing Packages
 refresh_clearing=Clearing package caches ..
 refresh_done=.. done
 refresh_available=Re-fetching available packages ..
-refresh_done2=.. found $1 in total
-refresh_done3=.. found $1 Virtualmin packages, $2 in total
+refresh_done4=.. found $1 possible updates
+refresh_done5=.. found $1 Virtualmin updates, $2 in total
 
 view_title=Package Details
 view_header=Updatable package information

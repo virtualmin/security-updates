@@ -8,3 +8,5 @@ Support for finding all installed packages, for use on the System Information pa
 ---- Changes since 3.8 ----
 Added in-memory caching of installed and available packages.
 Changed the cache file format to Perl Data::Dumper, to reduce CPU use.
+---- Changes since 4.0 ----
+Use new functions in Webmin 1.510 and later to get package updates more efficiently.
