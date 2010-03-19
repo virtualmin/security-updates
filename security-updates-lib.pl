@@ -45,7 +45,8 @@ $yum_changelog_cache_dir = "$module_config_directory/yumchangelog";
 # Returns undef if we can connect OK, or an error message
 sub test_connection
 {
-return undef if (&free_virtualmin_licence());	# GPL install
+return undef if (&free_virtualmin_licence() ||	# GPL version
+		 &free_cloudmin_licence());
 my ($user, $pass, $host) = &get_user_pass();
 return $text{'index_euser'} if (!$user);
 return undef;
@@ -571,7 +572,8 @@ elsif ($pkg->{'system'} eq 'tgz') {
 	my $error;
 	print &text('update_tgzdownload', ucfirst($pkg->{'name'})),"<br>\n";
 	my ($user, $pass) = &get_user_pass();
-	my $free = free_virtualmin_licence();
+	my $free = free_virtualmin_licence() ||
+		   free_cloudmin_licence();
 	my $path = $pkg->{'name'} eq 'webmin' && $free ?
 			$free_webmin_download_path :
 		      $pkg->{'name'} eq 'webmin' && !$free ?
@@ -717,7 +719,20 @@ else {
 sub free_virtualmin_licence
 {
 if (-r $virtualmin_licence) {
+	local %licence;
 	&read_env_file($virtualmin_licence, \%licence);
+	return $licence{'SerialNumber'} eq 'GPL' ? 1 : 0;
+	}
+return 0;
+}
+
+# free_cloudmin_licence()
+# Returns 1 if this is a GPL/free install of Cloudmin
+sub free_cloudmin_licence
+{
+if (-r $server_manager_licence) {
+	local %licence;
+	&read_env_file($server_manager_licence, \%licence);
 	return $licence{'SerialNumber'} eq 'GPL' ? 1 : 0;
 	}
 return 0;
@@ -950,7 +965,8 @@ foreach my $url (@urls) {
 
 # Add latest Webmin version available from Virtualmin, but only if was a
 # tar.gz install
-my $free = free_virtualmin_licence();
+my $free = free_virtualmin_licence() ||
+	   free_cloudmin_licence();
 my ($user, $pass) = &get_user_pass();
 if (&include_webmin_modules() == 1) {
 	my ($wver, $error);
