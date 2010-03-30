@@ -877,9 +877,8 @@ if (!$type) {
 	# Webmin tar.gz install
 	return 1;
 	}
-else {
+elsif (&foreign_check("virtual-server")) {
 	# How was virtual-server installed?
-	return 0 if (!&foreign_check("virtual-server"));
 	my $vtype = &read_file_contents(
 		&module_root_directory("virtual-server")."/install-type");
 	chop($vtype);
@@ -889,6 +888,18 @@ else {
 		}
 	return 0;
 	}
+elsif (&foreign_check("server-manager")) {
+	# How was server-manager installed?
+	my $vtype = &read_file_contents(
+		&module_root_directory("server-manager")."/install-type");
+	chop($vtype);
+	if (!$vtype) {
+		# A tar.gz install ... which we may be able to update
+		return 2;
+		}
+	return 0;
+	}
+return 0;
 }
 
 # include_usermin_modules()
