@@ -770,6 +770,8 @@ if (&supports_updates_available()) {
 			    'security' => $a->{'security'},
 			    'source' => $a->{'source'},
 			    'desc' => $c->{'desc'} || $a->{'desc'},
+			    'url' => $a->{'url'},
+			    'updatesurl' => $a->{'updatesurl'},
 			    'severity' => 0 });
 		}
 	}
@@ -795,6 +797,8 @@ else {
 				    'oldversion' => $c->{'version'},
 				    'epoch' => $a->{'epoch'},
 				    'desc' => $c->{'desc'} || $a->{'desc'},
+				    'url' => $a->{'url'},
+				    'updatesurl' => $a->{'updatesurl'},
 				    'severity' => 0 });
 			}
 		}
@@ -823,6 +827,8 @@ foreach my $a (sort { $a->{'name'} cmp $b->{'name'} } @avail) {
 			    'version' => $a->{'version'},
 			    'epoch' => $a->{'epoch'},
 			    'desc' => $a->{'desc'},
+			    'url' => $a->{'url'},
+			    'updatesurl' => $a->{'updatesurl'},
 			    'severity' => 0 });
 		}
 	}
