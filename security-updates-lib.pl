@@ -718,6 +718,10 @@ else {
 # Returns 1 if this is a GPL/free install of Virtualmin
 sub free_virtualmin_licence
 {
+my %minfo = &get_module_info('virtual-server');
+if (%minfo && $minfo{'virtualmin'} eq 'gpl') {
+	return 1;
+	}
 if (-r $virtualmin_licence) {
 	local %licence;
 	&read_env_file($virtualmin_licence, \%licence);
@@ -730,6 +734,10 @@ return 0;
 # Returns 1 if this is a GPL/free install of Cloudmin
 sub free_cloudmin_licence
 {
+my %minfo = &get_module_info('server-manager');
+if (%minfo && $minfo{'gpl'}) {
+	return 1;
+	}
 if (-r $server_manager_licence) {
 	local %licence;
 	&read_env_file($server_manager_licence, \%licence);
