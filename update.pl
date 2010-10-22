@@ -14,7 +14,7 @@ foreach $a (@todo) {
 $tellcount = 0;
 %already = ( );
 foreach $t (@todo) {
-	next if ($already{$t});
+	next if ($already{$t->{'update'}});
 	if ($t->{'level'} <= $config{'sched_action'}) {
 		# Can install
 		$body .= "An update to $t->{'name'} from $t->{'oldversion'} to $t->{'version'} is needed.\n";
