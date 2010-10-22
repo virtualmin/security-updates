@@ -12,7 +12,9 @@ foreach $a (@todo) {
 
 # Install packages that are needed
 $tellcount = 0;
+%already = ( );
 foreach $t (@todo) {
+	next if ($already{$t});
 	if ($t->{'level'} <= $config{'sched_action'}) {
 		# Can install
 		$body .= "An update to $t->{'name'} from $t->{'oldversion'} to $t->{'version'} is needed.\n";
@@ -23,6 +25,9 @@ foreach $t (@todo) {
 			}
 		else {
 			$body .= "However, this update could not be installed! Try the update manually\nusing the Virtualmin Package Updates module.\n\n";
+			}
+		foreach $p (@$done) {
+			$already{$p}++;
 			}
 		}
 	else {
