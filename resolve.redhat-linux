@@ -6,3 +6,5 @@ php4		php php-cli
 php5		php5 php5-cli
 fcgid		mod_fcgid
 virtualmin-modules	wbm-.* wbt-.* usm-.* ust-.*
+kvm	kvm kvm-qemu kvm-tools bridge-utils
+xen	xen xen-libs

@@ -14,7 +14,7 @@ use Data::Dumper;
 		     "subversion", "python", "ruby", "irb", "rdoc", "rubygems",
 		     "openssl", "perl", "php5", "webmin", "usermin",
 		     "fcgid", "awstats", "dovecot", "postgrey",
-		     "virtualmin-modules",
+		     "virtualmin-modules", "kvm", "xen",
 		   ); 
 
 $available_cache_file = "$module_config_directory/available.cache";
