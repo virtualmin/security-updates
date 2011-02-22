@@ -1,0 +1,61 @@
+__norefs=1
+index_action=Aktion wenn Aktualisierung erforderlich ist
+index_action0=Nur Benachrichtigen
+index_action1=Installiere Sicherheits-Updates
+index_action2=Installiere alle Updates
+index_all_1=Alle Pakete
+index_allsel=Pakete anzeigen:
+index_desc=Beschreibung
+index_mode_all=Alles
+index_mode_both=Updates und neue
+
+index_mode_new=Nur neue
+
+index_mode_security=Nur Sicherheits-Updates
+index_mode_updates=Nur Updates
+ 
+index_name=Paket
+index_new=Neue Version $1
+index_return=Paket-Liste
+
+index_sched0=Ja, jeden
+
+index_sched1=Nein
+index_schedd=Tag
+index_schedh=Stunde
+index_schedw=Woche
+index_source=Quelle
+index_status=Status
+index_title=Virtualmin Paket-Updates
+
+index_update=Ausgew&#228;hlte Pakete aktualisieren
+log_update=Installierte 1 $ aktualisierte Pakete
+
+system_apt=APT
+system_yum=YUM
+update_ok=$1 Pakete erfolgreich installiert.
+update_pkg=Aktualisiere jetzt $1...
+update_tgzdownload=Download neueste Version von 1 $...
+update_tgzdownloaded=.. heruntergeladen $ 1
+
+update_tgzsetup=Setupskript ausf&#252;hren ..
+update_tgzsetupdone= .. Aktualisierung abgeschlossen
+
+update_tgzuntar=Entpacke Archivdatei ..
+update_tgzuntardone=.. fertig
+update_title=Pakete aktualisieren
+update_wdownload=Download von Webmin-Modul $1...
+update_wdownloaded=.. Download abgeschlossen
+update_winstall=Installiere Webmin-Modul $1 ..
+update_winstalled=.. Installation abgeschlossen
+view_aversion=Verf&#252;gbare Version
+
+view_changelog=Changelog f&#252;r die verf&#252;gbare Version
+view_cversion=Installierte Version
+view_desc=Paketbeschreibung
+view_install=Installiere Paket
+view_name=Paketname
+view_source=Installationsquelle
+view_state=Aktueller Status
+view_system=System aktualisieren
+view_title=Paket-Details
