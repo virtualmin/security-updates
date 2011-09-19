@@ -706,6 +706,49 @@ unlink($current_all_cache_file);
 return @rv;
 }
 
+# package_install_multiple(&package-names, system)
+# Install multiple packages, either from an update system or from Webmin.
+# Returns a list of updated package names.
+sub package_install_multiple
+{
+my ($names, $system) = @_;
+my @rv;
+my $pkg;
+
+if ($system eq "webmin" || $system eq "tgz") {
+	# Install one by one
+	foreach my $name (@$names) {
+		push(@rv, &package_install($name, $system));
+		}
+	}
+elsif (defined(&software::update_system_install)) {
+	# Using some update system, like YUM or APT
+	&clean_environment();
+	if ($software::update_system eq $system) {
+		# Can use the default system
+		@rv = &software::update_system_install(
+			join(" ", @$names), undef, 1);
+		}
+	else {
+		# Another update system exists!! Use it..
+		if (!$done_rhn_lib++) {
+			do "../software/$pkg->{'system'}-lib.pl";
+			}
+		if (!$done_rhn_text++) {
+			%text = ( %text, %software::text );
+			}
+		@rv = &update_system_install(join(" ", @$names), undef, 1);
+		}
+	&reset_environment();
+	}
+else {
+	&error("Don't know how to install packages");
+	}
+# Flush installed cache
+unlink($current_cache_file);
+return @rv;
+}
+
 # get_user_pass()
 # Returns the username and password to use for HTTP requests, and the base site
 sub get_user_pass
