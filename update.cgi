@@ -35,6 +35,9 @@ else {
 	@pkgs || &error($text{'update_enone'});
 	&ui_print_unbuffered_header(undef, $text{'update_title'}, "");
 
+	# Check if a reboot was required before
+	$reboot_before = &check_reboot_required(0);
+
 	foreach my $ps (@pkgs) {
 		($p, $s) = split(/\//, $ps);
 		next if ($donedep{$p});
@@ -60,6 +63,15 @@ else {
 		if (defined(&virtual_server::refresh_possible_packages)) {
 			&virtual_server::refresh_possible_packages(\@got);
 			}
+		}
+
+	# Check if a reboot is required now
+	if (!$reboot_before && &check_reboot_required(1) &&
+	    &foreign_check("init")) {
+		print &ui_form_start("$gconfig{'webprefix'}/init/reboot.cgi");
+		print &ui_hidden("confirm", 1);
+		print "<b>",$text{'update_rebootdesc'},"</b><p>\n";
+		print &ui_form_end([ [ undef, $text{'update_reboot'} ] ]);
 		}
 
 	&webmin_log("update", "packages", scalar(@got),

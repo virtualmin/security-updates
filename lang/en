@@ -71,6 +71,8 @@ update_tgzuntardone=.. done
 update_tgzsetup=Running setup script ..
 update_tgzsetupdone=.. upgrade complete
 update_etgzsetup=.. upgrade failed! See the error message above for the reason why
+update_rebootdesc=One of the updated packages requires a reboot to be fully applied.
+update_reboot=Reboot Now
 
 sched_title=Scheduled Update
 sched_yes=Scheduled checking for updates is now active.
