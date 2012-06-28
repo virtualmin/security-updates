@@ -79,7 +79,7 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		}
 	elsif ($a && !$c) {
 		# Could be installed, but isn't currently
-		next if (!&installation_candiate($a));
+		next if (!$in{'all'} && !&installation_candiate($a));
 		$msg = "<font color=#00aa00>$text{'index_caninstall'}</font>";
 		$need = 0;
 		next if ($in{'mode'} ne 'both' && $in{'mode'} ne 'new' &&
