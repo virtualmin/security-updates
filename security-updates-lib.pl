@@ -1197,6 +1197,15 @@ if ($software::update_system eq "yum") {
 elsif ($software::update_system eq "apt") {
 	&execute_command("apt-get update");
 	}
+elsif ($software::update_system eq "ports") {
+        &foreign_require("proc");
+        foreach my $cmd ("portsnap fetch",
+                         "portsnap update || portsnap extract") {
+                my ($fh, $pid) = &proc::pty_process_exec($cmd);
+                while(<$fh>) { }
+                close($fh);
+                }
+	}
 }
 
 # set_pinned_versions(&packages)
