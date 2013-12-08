@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 # Show installed packages, and flag those for which an update is needed
 
 require './security-updates-lib.pl';
@@ -29,8 +29,8 @@ foreach $m ('all', 'updates', 'new', 'both',
 		push(@mlinks, "<b>$mmsg</b>");
 		}
 	else {
-		push(@mlinks, "<a href='index.cgi?mode=$m&all=".
-			      &urlize($in{'all'})."'>$mmsg</a>");
+		push(@mlinks, &ui_link("index.cgi?mode=$m&all=".
+                               &urlize($in{'all'}), $mmsg));
 		}
 	}
 push(@grid, $text{'index_mode'}, &ui_links_row(\@mlinks));
@@ -44,8 +44,8 @@ if (&show_all_option()) {
 			push(@alinks, "<b>$amsg</b>");
 			}
 		else {
-			push(@alinks, "<a href='index.cgi?mode=".
-				&urlize($in{'mode'})."&all=$a'>$amsg</a>");
+			push(@alinks, &ui_link("index.cgi?mode=".
+				                   &urlize($in{'mode'})."&all=$a", $amsg));
 			}
 		}
 	push(@grid, $text{'index_allsel'}, &ui_links_row(\@alinks));
@@ -79,7 +79,7 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		}
 	elsif ($a && !$c) {
 		# Could be installed, but isn't currently
-		next if (!$in{'all'} && !&installation_candiate($a));
+		next if (!&installation_candiate($a));
 		$msg = "<font color=#00aa00>$text{'index_caninstall'}</font>";
 		$need = 0;
 		next if ($in{'mode'} ne 'both' && $in{'mode'} ne 'new' &&
@@ -111,9 +111,9 @@ foreach $p (sort { $a->{'name'} cmp $b->{'name'} } (@current, @avail)) {
 		{ 'type' => 'checkbox', 'name' => 'u',
 		  'value' => $p->{'update'}."/".$p->{'system'},
 		  'checked' => $need },
-		"<a href='view.cgi?all=$in{'all'}&mode=$in{'mode'}&name=".
+		  &ui_link("view.cgi?all=$in{'all'}&mode=$in{'mode'}&name=".
 		  &urlize($p->{'name'})."&system=".
-		  &urlize($p->{'system'})."'>$p->{'name'}</a>",
+		  &urlize($p->{'system'}), $p->{'name'}),
 		$p->{'desc'},
 		$msg,
 		$source ? ( $source ) : $anysource ? ( "") : ( ),
