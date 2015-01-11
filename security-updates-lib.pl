@@ -3,9 +3,9 @@
 BEGIN { push(@INC, ".."); };
 eval "use WebminCore;";
 &init_config();
-&foreign_require("software", "software-lib.pl");
-&foreign_require("cron", "cron-lib.pl");
-&foreign_require("webmin", "webmin-lib.pl");
+&foreign_require("software");
+&foreign_require("cron");
+&foreign_require("webmin");
 use Data::Dumper;
 
 @update_packages = ( "apache", "postfix", "sendmail", "bind", "procmail",
@@ -1005,6 +1005,7 @@ return 0;
 sub webmin_modules_available
 {
 my @rv;
+return () if (&webmin::shared_root_directory());
 my @urls = $webmin::config{'upsource'} ?
 			split(/\t+/, $webmin::config{'upsource'}) :
 			( $webmin::update_url );
