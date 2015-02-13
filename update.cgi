@@ -58,11 +58,15 @@ else {
 		}
 
 	# Refresh collected package info
+	if (&foreign_check("system-status")) {
+		&foreign_require("system-status");
+		&system_status::refresh_possible_packages(\@got);
+		}
+
+	# Refresh collected package info
 	if (&foreign_check("virtual-server") && @got) {
-		&foreign_require("virtual-server", "virtual-server-lib.pl");
-		if (defined(&virtual_server::refresh_possible_packages)) {
-			&virtual_server::refresh_possible_packages(\@got);
-			}
+		&foreign_require("virtual-server");
+		&virtual_server::refresh_possible_packages(\@got);
 		}
 
 	# Check if a reboot is required now
