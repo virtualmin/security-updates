@@ -3,7 +3,16 @@
 
 require './security-updates-lib.pl';
 &ReadParse();
-$redir = "index.cgi?mode=".&urlize($in{'mode'})."&all=".&urlize($in{'all'});
+
+if ($ENV{'HTTP_REFERER'} =~ /\/$module_name\//) {
+	$redir = "index.cgi?mode=".&urlize($in{'mode'}).
+		 "&all=".&urlize($in{'all'});
+	$remsg = $text{'index_return'};
+	}
+else {
+	$redir = $ENV{'HTTP_REFERER'};
+	$remsg = $text{'index_return2'};
+	}
 
 if ($in{'refresh'}) {
 	&ui_print_unbuffered_header(undef, $text{'refresh_title'}, "");

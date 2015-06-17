@@ -10,6 +10,7 @@ index_ok=Running latest $1
 index_update=Update Selected Packages
 index_install=Install Selected Packages
 index_return=package list
+index_return2=previous page
 index_header=Scheduled checking options
 index_sched=Check for updates on schedule?
 index_sched1=No
