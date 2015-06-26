@@ -17,11 +17,15 @@ use Data::Dumper;
 		     "virtualmin-modules", "kvm", "xen", "nginx",
 		   ); 
 
-$available_cache_file = "$module_config_directory/available.cache";
-$current_cache_file = "$module_config_directory/current.cache";
-$current_all_cache_file = "$module_config_directory/current-all.cache";
-$updates_cache_file = "$module_config_directory/updates.cache";
+$available_cache_file = &cache_file_path("available.cache");
+$current_cache_file = &cache_file_path("current.cache");
+$current_all_cache_file = &cache_file_path("current-all.cache");
+$updates_cache_file = &cache_file_path("updates.cache");
 $cron_cmd = "$module_config_directory/update.pl";
+
+$yum_cache_file = &cache_file_path("yumcache");
+$apt_cache_file = &cache_file_path("aptcache");
+$yum_changelog_cache_dir = &cache_file_path("yumchangelog");
 
 $virtualmin_host = $config{'host'} || "software.virtualmin.com";
 $virtualmin_port = 80;
@@ -37,9 +41,17 @@ $usermin_download_path = "$config{'suffix'}/wbm/usermin-current.tar.gz";
 $free_webmin_download_path = "$config{'suffix'}/gpl/wbm/webmin-current.tar.gz";
 $free_usermin_download_path = "$config{'suffix'}/gpl/wbm/usermin-current.tar.gz";
 
-$yum_cache_file = "$module_config_directory/yumcache";
-$apt_cache_file = "$module_config_directory/aptcache";
-$yum_changelog_cache_dir = "$module_config_directory/yumchangelog";
+# cache_file_path(name)
+# Returns a path in the /var directory unless the file already exists under
+# /etc/webmin
+sub cache_file_path
+{
+my ($name) = @_;
+if (-e "$module_config_directory/$name" || !$module_var_directory) {
+	return "$module_config_directory/$name";
+	}
+return "$module_var_directory/$name";
+}
 
 # test_connection()
 # Returns undef if we can connect OK, or an error message
